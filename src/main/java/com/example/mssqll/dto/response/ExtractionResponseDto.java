@@ -1,5 +1,6 @@
 package com.example.mssqll.dto.response;
 
+import com.example.mssqll.dto.enumType.Status;
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,5 +23,8 @@ public class ExtractionResponseDto {
     private String purpose;
 
     private String description;
+
+    private Status status;
+
 
 }

@@ -1,5 +1,6 @@
 package com.example.mssqll.dto.request;
 
+import com.example.mssqll.dto.enumType.Status;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,5 +17,6 @@ public class ExtractionRequestDto {
 
     private String description;
 
+    private Status status;
 
 }

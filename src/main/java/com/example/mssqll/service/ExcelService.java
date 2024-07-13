@@ -9,7 +9,9 @@ import java.util.List;
 
 
 public interface ExcelService{
-    public List<ExtractionResponseDto> readExcel(MultipartFile file);
-    public ExtractionResponseDto create(Extraction extraction);
-    public PagedModel<Extraction> getAllExtractions(int page, int size) ;
+     List<ExtractionResponseDto> readExcel(MultipartFile file);
+     ExtractionResponseDto create(Extraction extraction);
+     PagedModel<Extraction> getAllExtractions(int page, int size) ;
+     PagedModel<Extraction> getAllWarningExtractions(int page, int size) ;
+     PagedModel<Extraction> getAllOkExtractions(int page, int size) ;
 }

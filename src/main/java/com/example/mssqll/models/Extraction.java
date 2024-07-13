@@ -1,5 +1,6 @@
 package com.example.mssqll.models;
 
+import com.example.mssqll.dto.enumType.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +18,7 @@ public class Extraction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "date", nullable = false)
+    @Column(name = "date",nullable = true )
     private LocalDate date;
 
     @Column(name = "total_amount", nullable = false)
@@ -28,5 +29,9 @@ public class Extraction {
 
     @Column(name = "description", length = 255, nullable = false)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private Status status;
 
 }

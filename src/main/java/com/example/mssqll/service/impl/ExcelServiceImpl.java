@@ -1,7 +1,9 @@
 package com.example.mssqll.service.impl;
 
+import com.example.mssqll.dto.enumType.Status;
 import com.example.mssqll.dto.request.ExtractionRequestDto;
 import com.example.mssqll.dto.response.ExtractionResponseDto;
+import com.example.mssqll.dto.response.MissingFieldInfo;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.service.ExcelService;
@@ -20,39 +22,57 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+
 
 @RequiredArgsConstructor
 @Service
 public class ExcelServiceImpl implements ExcelService {
     private final ExtractionRepository extractionRepository;
 
+private boolean isCellEmpty(Cell cell) {
+    return cell == null || cell.getCellType() == CellType.BLANK;
+}
     @Override
     public List<ExtractionResponseDto> readExcel(MultipartFile file) {
-        List<ExtractionRequestDto> extractionRequestDtoList = new ArrayList<>();
-        try {
-            XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
-            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
-                Sheet sheet = workbook.getSheetAt(i);
-                System.out.println("Sheet: " + sheet.getSheetName());
-                for (Row row : sheet) {
-                    if (row.getRowNum() == 0) {
-                        continue;
-                    }
+        List<ExtractionResponseDto> extractionResponseDtoList = new ArrayList<>();
+         try {
+        XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
+        for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            Sheet sheet = workbook.getSheetAt(i);
+            System.out.println("Sheet: " + sheet.getSheetName());
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) {
+                    continue;
+                }
+                Extraction extraction = new Extraction();
+                LocalDate date = null;
+                int totalAmount = -1;
+                String purpose = "";
+                String description = "";
+                Status status = Status.OK;
 
-                    StringBuilder rowString = new StringBuilder("Row " + row.getRowNum() + ": ");
-                    String dateStr = "";
-                    int totalAmount = 0;
-                    String purpose = "";
-                    String description = "";
+                for (int cellNum = 0; cellNum < row.getLastCellNum(); cellNum++) {
+                    Cell cell = row.getCell(cellNum, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
 
-                    for (Cell cell : row) {
+                    if (isCellEmpty(cell)) {
+                    } else {
                         String cellValue = getCellValueAsString(cell);
-                        switch (cell.getColumnIndex()) {
+
+                        switch (cellNum) {
                             case 0:
-                                dateStr = cellValue;
+                                if (!cellValue.isEmpty()) {
+                                    date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                                }
                                 break;
                             case 1:
-                                totalAmount = Integer.parseInt(cellValue);
+                                if (!cellValue.isEmpty()) {
+                                    try {
+                                        totalAmount = Integer.parseInt(cellValue);
+                                    } catch (NumberFormatException e) {
+                                        totalAmount = -1;
+                                    }
+                                }
                                 break;
                             case 2:
                                 purpose = cellValue;
@@ -61,70 +81,61 @@ public class ExcelServiceImpl implements ExcelService {
                                 description = cellValue;
                                 break;
                         }
-                        rowString.append(cellValue).append("\t");
                     }
-                    System.out.println(rowString);
-
-                    LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-
-                    extractionRequestDtoList.add(ExtractionRequestDto.builder()
-                            .date(date)
-                            .totalAmount(totalAmount)
-                            .purpose(purpose)
-                            .description(description)
-                            .build());
                 }
-                System.out.println();
+
+                if (date == null || totalAmount == -1) {
+                    status = Status.WARNING;
+                }
+
+                extraction.setDate(date);
+                extraction.setTotalAmount(totalAmount);
+                extraction.setPurpose(purpose);
+                extraction.setDescription(description);
+                extraction.setStatus(status);
+
+                Extraction excelExtraction = extractionRepository.save(extraction);
+                extractionResponseDtoList.add(ExtractionResponseDto.builder()
+                        .id(excelExtraction.getId())
+                        .date(excelExtraction.getDate())
+                        .totalAmount(excelExtraction.getTotalAmount())
+                        .purpose(excelExtraction.getPurpose())
+                        .description(excelExtraction.getDescription())
+                        .status(excelExtraction.getStatus())
+                        .build()
+                );
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-
-        List<ExtractionResponseDto> extractionResponseDtoList = new ArrayList<>();
-        for (ExtractionRequestDto requestDto : extractionRequestDtoList) {
-            Extraction extraction = Extraction.builder()
-                    .date(requestDto.getDate())
-                    .totalAmount(requestDto.getTotalAmount())
-                    .purpose(requestDto.getPurpose())
-                    .description(requestDto.getDescription())
-                    .build();
-            Extraction savedExtraction = extractionRepository.save(extraction);
-            extractionResponseDtoList.add(ExtractionResponseDto.builder()
-                    .id(savedExtraction.getId())
-                    .date(savedExtraction.getDate())
-                    .totalAmount(savedExtraction.getTotalAmount())
-                    .purpose(savedExtraction.getPurpose())
-                    .description(savedExtraction.getDescription())
-                    .build());
-        }
-
-        return extractionResponseDtoList;
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+         return extractionResponseDtoList;
     }
 
     public String getCellValueAsString(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
+       if (cell == null) {
+        return "";
+    }
 
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    Date date = cell.getDateCellValue();
-                    return new SimpleDateFormat("dd/MM/yyyy").format(date);
-                } else {
-                    return String.valueOf((int) cell.getNumericCellValue());
-                }
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return cell.getCellFormula();
-            case BLANK:
-                return "";
-            default:
-                return "Unknown Cell Type";
-        }
+    switch (cell.getCellType()) {
+        case STRING:
+            return cell.getStringCellValue();
+        case NUMERIC:
+            if (DateUtil.isCellDateFormatted(cell)) {
+                Date date = cell.getDateCellValue();
+                return new SimpleDateFormat("dd/MM/yyyy").format(date);
+            } else {
+                return String.valueOf((int) cell.getNumericCellValue());
+            }
+        case BOOLEAN:
+            return String.valueOf(cell.getBooleanCellValue());
+        case FORMULA:
+            return cell.getCellFormula();
+        case BLANK:
+            return "";
+        default:
+            return "Unknown Cell Type";
+    }
     }
 
     @Override
@@ -143,4 +154,16 @@ public class ExcelServiceImpl implements ExcelService {
     public PagedModel<Extraction> getAllExtractions(int page, int size) {
         return new PagedModel<>(extractionRepository.findAll(PageRequest.of(page, size)));
     }
+
+    @Override
+    public PagedModel<Extraction> getAllWarningExtractions(int page, int size) {
+        System.out.println("Warning extractions");
+        return new PagedModel<>(extractionRepository.findByStatus(Status.WARNING,PageRequest.of(page, size)));
+    }
+    @Override
+    public PagedModel<Extraction> getAllOkExtractions(int page, int size) {
+        System.out.println("OK extractions");
+        return new PagedModel<>(extractionRepository.findByStatus(Status.OK,PageRequest.of(page, size)));
+    }
+
 }
