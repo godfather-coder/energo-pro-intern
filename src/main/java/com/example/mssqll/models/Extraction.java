@@ -18,7 +18,7 @@ public class Extraction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "date",nullable = true )
+    @Column(name = "date" )
     private LocalDate date;
 
     @Column(name = "total_amount", nullable = false)
@@ -30,8 +30,10 @@ public class Extraction {
     @Column(name = "description", length = 255, nullable = false)
     private String description;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Status status;
+    private int status;
 
+    @ManyToOne
+    @JoinColumn(name = "extraction_task_id", nullable = false)
+    private ExtractionTask extractionTask;
 }

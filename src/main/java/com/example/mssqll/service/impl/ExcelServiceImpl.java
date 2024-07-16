@@ -1,11 +1,10 @@
 package com.example.mssqll.service.impl;
 
-import com.example.mssqll.dto.enumType.Status;
-import com.example.mssqll.dto.request.ExtractionRequestDto;
 import com.example.mssqll.dto.response.ExtractionResponseDto;
-import com.example.mssqll.dto.response.MissingFieldInfo;
 import com.example.mssqll.models.Extraction;
+import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.repository.ExtractionRepository;
+import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
@@ -18,94 +17,105 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 
 @RequiredArgsConstructor
 @Service
 public class ExcelServiceImpl implements ExcelService {
     private final ExtractionRepository extractionRepository;
+    private final ExtractionTaskRepository extractionTaskRepository;
 
 private boolean isCellEmpty(Cell cell) {
     return cell == null || cell.getCellType() == CellType.BLANK;
 }
     @Override
     public List<ExtractionResponseDto> readExcel(MultipartFile file) {
+        System.out.println("readExcel");
+        LocalDateTime today = LocalDateTime.now();
+        ExtractionTask extTask = extractionTaskRepository.save(new ExtractionTask(today, file.getOriginalFilename(), 1));
         List<ExtractionResponseDto> extractionResponseDtoList = new ArrayList<>();
-         try {
-        XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
-        for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
-            Sheet sheet = workbook.getSheetAt(i);
-            System.out.println("Sheet: " + sheet.getSheetName());
-            for (Row row : sheet) {
-                if (row.getRowNum() == 0) {
-                    continue;
-                }
-                Extraction extraction = new Extraction();
-                LocalDate date = null;
-                int totalAmount = -1;
-                String purpose = "";
-                String description = "";
-                Status status = Status.OK;
+        try {
+            XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                Sheet sheet = workbook.getSheetAt(i);
+                System.out.println("Sheet: " + sheet.getSheetName());
+                for (Row row : sheet) {
+                    if (row.getRowNum() == 0) {
+                        continue;
+                    }
+                    Extraction extraction = new Extraction();
+                    LocalDate date = null;
+                    int totalAmount = -1;
+                    String purpose = "";
+                    String description = "";
+                    int status = 1;
 
-                for (int cellNum = 0; cellNum < row.getLastCellNum(); cellNum++) {
-                    Cell cell = row.getCell(cellNum, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                    for (int cellNum = 0; cellNum < row.getLastCellNum(); cellNum++) {
+                        Cell cell = row.getCell(cellNum, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
 
-                    if (isCellEmpty(cell)) {
-                    } else {
-                        String cellValue = getCellValueAsString(cell);
+                        if (isCellEmpty(cell)) {
+                        } else {
+                            String cellValue = getCellValueAsString(cell);
 
-                        switch (cellNum) {
-                            case 0:
-                                if (!cellValue.isEmpty()) {
-                                    date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                                }
-                                break;
-                            case 1:
-                                if (!cellValue.isEmpty()) {
-                                    try {
-                                        totalAmount = Integer.parseInt(cellValue);
-                                    } catch (NumberFormatException e) {
-                                        totalAmount = -1;
+                            switch (cellNum) {
+                                case 0:
+                                    if (!cellValue.isEmpty()) {
+                                        date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
                                     }
-                                }
-                                break;
-                            case 2:
-                                purpose = cellValue;
-                                break;
-                            case 3:
-                                description = cellValue;
-                                break;
+                                    break;
+                                case 1:
+                                    if (!cellValue.isEmpty()) {
+                                        try {
+                                            totalAmount = Integer.parseInt(cellValue);
+                                        } catch (NumberFormatException e) {
+                                            totalAmount = -1;
+                                        }
+                                    }
+                                    break;
+                                case 2:
+                                    purpose = cellValue;
+                                    break;
+                                case 3:
+                                    description = cellValue;
+                                    break;
+                            }
                         }
                     }
+
+                    if (date == null || totalAmount == -1) {
+                        status = 0;
+                    }
+
+                    extraction.setDate(date);
+                    extraction.setTotalAmount(totalAmount);
+                    extraction.setPurpose(purpose);
+                    extraction.setDescription(description);
+                    extraction.setStatus(status);
+                    extraction.setExtractionTask(extTask);
+                    System.out.println("Extraction Task : "+ extTask) ;
+                    if(status == 0) {
+                        System.out.println("aris erori");
+                        extTask.setStatus(0);
+                        extractionTaskRepository.save(extTask);
+                    }
+                    Extraction excelExtraction = extractionRepository.save(extraction);
+                    extractionResponseDtoList.add(ExtractionResponseDto.builder()
+                            .id(excelExtraction.getId())
+                            .date(excelExtraction.getDate())
+                            .totalAmount(excelExtraction.getTotalAmount())
+                            .purpose(excelExtraction.getPurpose())
+                            .description(excelExtraction.getDescription())
+                            .status(excelExtraction.getStatus())
+                            .extractionTask(excelExtraction.getExtractionTask())
+                            .build()
+                    );
                 }
-
-                if (date == null || totalAmount == -1) {
-                    status = Status.WARNING;
-                }
-
-                extraction.setDate(date);
-                extraction.setTotalAmount(totalAmount);
-                extraction.setPurpose(purpose);
-                extraction.setDescription(description);
-                extraction.setStatus(status);
-
-                Extraction excelExtraction = extractionRepository.save(extraction);
-                extractionResponseDtoList.add(ExtractionResponseDto.builder()
-                        .id(excelExtraction.getId())
-                        .date(excelExtraction.getDate())
-                        .totalAmount(excelExtraction.getTotalAmount())
-                        .purpose(excelExtraction.getPurpose())
-                        .description(excelExtraction.getDescription())
-                        .status(excelExtraction.getStatus())
-                        .build()
-                );
             }
-        }
     } catch (IOException e) {
         e.printStackTrace();
     }
@@ -147,6 +157,7 @@ private boolean isCellEmpty(Cell cell) {
                 .totalAmount(ext.getTotalAmount())
                 .purpose(ext.getPurpose())
                 .description(ext.getDescription())
+                .extractionTask(ext.getExtractionTask())
                 .build();
     }
 
@@ -158,12 +169,26 @@ private boolean isCellEmpty(Cell cell) {
     @Override
     public PagedModel<Extraction> getAllWarningExtractions(int page, int size) {
         System.out.println("Warning extractions");
-        return new PagedModel<>(extractionRepository.findByStatus(Status.WARNING,PageRequest.of(page, size)));
+        return new PagedModel<>(extractionRepository.findByStatus(0,PageRequest.of(page, size)));
     }
     @Override
     public PagedModel<Extraction> getAllOkExtractions(int page, int size) {
         System.out.println("OK extractions");
-        return new PagedModel<>(extractionRepository.findByStatus(Status.OK,PageRequest.of(page, size)));
+        return new PagedModel<>(extractionRepository.findByStatus(1,PageRequest.of(page, size)));
+    }
+    @Override
+    public PagedModel<Extraction> getAllExtractionsWithFile(int page, int size, Long fileId){
+        return new PagedModel<>(extractionRepository.findByExtractionTaskId(fileId,PageRequest.of(page,size)));
     }
 
+    @Override
+    public PagedModel<Extraction> getAllOkExtractionsWithFile(int page, int size,Long fileid) {
+        return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(fileid,1,PageRequest.of(page, size)));
+    }
+
+    @Override
+    public PagedModel<Extraction> getAllWarningExtractionsWithFile(int page, int size, Long fileid) {
+        System.out.println();
+        return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(fileid,0,PageRequest.of(page, size)));
+    }
 }

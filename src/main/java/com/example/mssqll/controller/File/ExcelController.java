@@ -60,5 +60,30 @@ public class ExcelController {
         return new ApiResponse<>(true, "Ok Data", excelService.getAllOkExtractions(adjustedPage, size));
     }
 
+    @GetMapping("/getExtractionsByFile")
+    public ApiResponse<PagedModel<Extraction>> getExtractionByFile(
+             @RequestParam(defaultValue = "1") int page,
+             @RequestParam(defaultValue = "10") int size,
+             @RequestParam  Long fileId){
+        int adjustedPage = (page < 1) ? 0 : page - 1;
+        return new ApiResponse<>(true, "Ok Data", excelService.getAllExtractionsWithFile(adjustedPage,size,fileId));
+    }
 
+    @GetMapping("/getWarningExtractionsByFile")
+    public ApiResponse<PagedModel<Extraction>> getWarningExtractionByFile(
+             @RequestParam(defaultValue = "1") int page,
+             @RequestParam(defaultValue = "10") int size,
+             @RequestParam  Long fileId){
+        int adjustedPage = (page < 1) ? 0 : page - 1;
+        return new ApiResponse<>(true, "Ok Data", excelService.getAllWarningExtractionsWithFile(adjustedPage,size,fileId));
+    }
+
+    @GetMapping("/getOkExtractionsByFile")
+    public ApiResponse<PagedModel<Extraction>> getOkExtractionByFile(
+             @RequestParam(defaultValue = "1") int page,
+             @RequestParam(defaultValue = "10") int size,
+             @RequestParam  Long fileId){
+        int adjustedPage = (page < 1) ? 0 : page - 1;
+        return new ApiResponse<>(true, "Ok Data", excelService.getAllOkExtractionsWithFile(adjustedPage,size,fileId));
+    }
 }

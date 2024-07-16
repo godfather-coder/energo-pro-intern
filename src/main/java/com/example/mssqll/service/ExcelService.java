@@ -14,4 +14,8 @@ public interface ExcelService{
      PagedModel<Extraction> getAllExtractions(int page, int size) ;
      PagedModel<Extraction> getAllWarningExtractions(int page, int size) ;
      PagedModel<Extraction> getAllOkExtractions(int page, int size) ;
+     PagedModel<Extraction> getAllOkExtractionsWithFile(int page, int size,Long fileid) ;
+     PagedModel<Extraction> getAllExtractionsWithFile(int page, int size, Long fileid);
+     PagedModel<Extraction> getAllWarningExtractionsWithFile(int page, int size, Long fileid);
+
 }
