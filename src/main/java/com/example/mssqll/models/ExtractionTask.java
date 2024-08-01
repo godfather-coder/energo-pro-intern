@@ -13,6 +13,7 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @ToString
+@Getter
 public class ExtractionTask {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

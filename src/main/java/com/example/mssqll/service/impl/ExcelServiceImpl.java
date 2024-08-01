@@ -9,7 +9,9 @@ import com.example.mssqll.service.ExcelService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,10 +52,11 @@ private boolean isCellEmpty(Cell cell) {
                     }
                     Extraction extraction = new Extraction();
                     LocalDate date = null;
-                    int totalAmount = -1;
+                    int totalAmount = 0;
                     String purpose = "";
                     String description = "";
                     int status = 1;
+                    boolean notbs = true;
 
                     for (int cellNum = 0; cellNum < row.getLastCellNum(); cellNum++) {
                         Cell cell = row.getCell(cellNum, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
@@ -73,7 +76,7 @@ private boolean isCellEmpty(Cell cell) {
                                         try {
                                             totalAmount = Integer.parseInt(cellValue);
                                         } catch (NumberFormatException e) {
-                                            totalAmount = -1;
+                                            totalAmount = 0;
                                         }
                                     }
                                     break;
@@ -87,8 +90,11 @@ private boolean isCellEmpty(Cell cell) {
                         }
                     }
 
-                    if (date == null || totalAmount == -1) {
+                    if (date == null || totalAmount == 0) {
                         status = 0;
+                    }
+                    if(date == null && totalAmount == 0 && purpose == "" && description == ""){
+                        status = 1;
                     }
 
                     extraction.setDate(date);
@@ -97,12 +103,15 @@ private boolean isCellEmpty(Cell cell) {
                     extraction.setDescription(description);
                     extraction.setStatus(status);
                     extraction.setExtractionTask(extTask);
-                    System.out.println("Extraction Task : "+ extTask) ;
+
                     if(status == 0) {
-                        System.out.println("aris erori");
                         extTask.setStatus(0);
                         extractionTaskRepository.save(extTask);
                     }
+                     if(date == null && totalAmount == 0 && purpose == "" && description == ""){
+                         System.out.println(extraction);
+                         continue;
+                     }
                     Extraction excelExtraction = extractionRepository.save(extraction);
                     extractionResponseDtoList.add(ExtractionResponseDto.builder()
                             .id(excelExtraction.getId())
@@ -148,18 +157,6 @@ private boolean isCellEmpty(Cell cell) {
     }
     }
 
-    @Override
-    public ExtractionResponseDto create(Extraction extraction) {
-        Extraction ext = extractionRepository.save(extraction);
-        return ExtractionResponseDto.builder()
-                .id(ext.getId())
-                .date(ext.getDate())
-                .totalAmount(ext.getTotalAmount())
-                .purpose(ext.getPurpose())
-                .description(ext.getDescription())
-                .extractionTask(ext.getExtractionTask())
-                .build();
-    }
 
     @Override
     public PagedModel<Extraction> getAllExtractions(int page, int size) {
@@ -168,12 +165,10 @@ private boolean isCellEmpty(Cell cell) {
 
     @Override
     public PagedModel<Extraction> getAllWarningExtractions(int page, int size) {
-        System.out.println("Warning extractions");
         return new PagedModel<>(extractionRepository.findByStatus(0,PageRequest.of(page, size)));
     }
     @Override
     public PagedModel<Extraction> getAllOkExtractions(int page, int size) {
-        System.out.println("OK extractions");
         return new PagedModel<>(extractionRepository.findByStatus(1,PageRequest.of(page, size)));
     }
     @Override
@@ -182,13 +177,123 @@ private boolean isCellEmpty(Cell cell) {
     }
 
     @Override
+    public PagedModel<Extraction> getAllWarningExtractionsWithFile(int page, int size, Long fileid) {
+        return null;
+    }
+
+    @Override
     public PagedModel<Extraction> getAllOkExtractionsWithFile(int page, int size,Long fileid) {
         return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(fileid,1,PageRequest.of(page, size)));
     }
 
     @Override
-    public PagedModel<Extraction> getAllWarningExtractionsWithFile(int page, int size, Long fileid) {
-        System.out.println();
-        return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(fileid,0,PageRequest.of(page, size)));
+    public Long getGrandTotal(ExtractionTask taskId) {
+        return extractionRepository.sumTotalAmountByExtractionTask(taskId);
+    }
+
+    @Override
+    public Long getTotalWarning() {
+        return extractionRepository.countAllByStatus(0);
+    }
+
+    @Override
+    public Long getTotalOk() {
+        return extractionRepository.countAllByStatus(1);
+    }
+
+    @Override
+    public Long getTotalExtractionCount() {
+        return extractionRepository.count();
+    }
+
+    @Override
+    public Long getGrandTotal() {
+        return extractionRepository.sumTotalAmount();
+    }
+
+
+    @Override
+    public Long getExtractionCountByExtractionTaskId(ExtractionTask extractionTask) {
+        return extractionRepository.countAllByExtractionTaskId(extractionTask.getId());
+    }
+
+    @Override
+    public Long sumTotalAmountByStatus(int status) {
+        return extractionRepository.sumTotalAmountByStatus(status);
+    }
+
+    @Override
+    public Long getTotalAmountByExtractionTaskId(Long id) {
+        return extractionRepository.sumTotalAmountByExtractionTask(
+                extractionTaskRepository.getReferenceById(id)
+        );
+    }
+
+    @Override
+    public Long getCountWarningsByFileId(Long fileId) {
+        return extractionRepository.countWarningsByFileId(extractionTaskRepository.getReferenceById(fileId));
+
+    }
+
+    @Override
+    public Long getCountOkByFileId(Long fileId) {
+         return extractionRepository.countOkByFileId(extractionTaskRepository.getReferenceById(fileId));
+    }
+
+    @Override
+    public PagedModel<Extraction> getWarningByExtractionTask(Long extractionTaskId, int page, int size) {
+        return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(extractionTaskId,0,PageRequest.of(page, size))
+        );
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        extractionRepository.deleteByExtractionTask(extractionTaskRepository.getReferenceById(id));
+        extractionTaskRepository.deleteById(id);
+    }
+
+    @Override
+    public PagedModel<Extraction> getByDate(LocalDate from, LocalDate to,int page, int size) {
+        return new PagedModel<>(extractionRepository.findAllByDateBetween(from,to,PageRequest.of(page,size)));
+    }
+
+    @Override
+    public Long getWarnCountByDate(LocalDate from, LocalDate to) {
+        return extractionRepository.countWarningsByDate(from,to);
+    }
+
+    @Override
+    public Long getOkCountByDate(LocalDate from, LocalDate to) {
+       return extractionRepository.countOksByDate(from,to);
+    }
+
+    @Override
+    public Long sumByDate(LocalDate from, LocalDate to) {
+        return extractionRepository.sumByDate(from,to);
+    }
+
+    @Override
+    public PagedModel<Extraction> getByTotalAmount(Long totalAmount, int page, int size) {
+        return new PagedModel<>(extractionRepository.findByTotalAmount(totalAmount,PageRequest.of(page,size)));
+    }
+
+    @Override
+    public Long countByTotalAmountAndStatus(Long totalAmount, int status) {
+        return extractionRepository.countByTotalAmountAndStatus(totalAmount,status);
+    }
+
+    @Override
+    public Long sumByTotalAmount(Long totalAmount) {
+        return extractionRepository.sumByTotalAmount(totalAmount);
+    }
+
+    @Override
+    public PagedModel<Extraction> getByAmountAndStatus(Long total,int page, int size, int status) {
+        return new PagedModel<>(extractionRepository.findByTotalAmountAndStatus(total, PageRequest.of(page,size),status));
+    }
+
+    @Override
+    public ExtractionRepository getRepo() {
+        return this.extractionRepository;
     }
 }
