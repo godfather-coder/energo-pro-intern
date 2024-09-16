@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ExtractionTaskService {
     public PagedModel<ExtractionTask> getExtractionTasks(int page, int size);
+    List<ExtractionTask> findByName(String name);
 }

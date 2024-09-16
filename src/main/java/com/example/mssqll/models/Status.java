@@ -1,2 +1,8 @@
-package com.example.mssqll.models;public enum Status {
+package com.example.mssqll.models;
+
+public enum Status {
+    WARNING,
+    GOOD,
+    TRANSFERRED,
+    TRANSFER_COMPLETE,
 }

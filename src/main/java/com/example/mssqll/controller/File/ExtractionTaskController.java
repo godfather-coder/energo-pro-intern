@@ -6,11 +6,7 @@ import com.example.mssqll.service.impl.ExtractionTaskServiceImpl;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.web.PagedModel;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,5 +23,9 @@ public class ExtractionTaskController {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         return new ApiResponse<>(true, "Data fetched",extractionTaskService.getExtractionTasks(adjustedPage,size));
     }
-
+    @GetMapping("/find-by-name/{fileName}")
+    public ApiResponse<List<ExtractionTask>> findByName(@PathVariable String fileName) {
+        List<ExtractionTask> extractionTasks = extractionTaskService.findByName(fileName);
+        return new ApiResponse<>(true, "Files fetched", extractionTasks);
+    }
 }

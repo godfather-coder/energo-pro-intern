@@ -3,6 +3,7 @@ package com.example.mssqll.controller.File;
 import com.example.mssqll.dto.response.ExtractionResponseDto;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
 import com.example.mssqll.utiles.exceptions.FileNotSupportedException;
@@ -36,7 +37,7 @@ public class ExcelController {
             throw new FileNotSupportedException("Only Excel files are supported");
         }
         List<ExtractionResponseDto> extractionResponseDtoList = excelService.readExcel(file);
-        Long warn = extractionResponseDtoList.stream().filter(extractionResponseDto -> extractionResponseDto.getStatus() ==0).count();
+        Long warn = extractionResponseDtoList.stream().filter(extractionResponseDto -> extractionResponseDto.getStatus() == Status.WARNING).count();
         Long ok = extractionResponseDtoList.size() - warn;
         Long gt = excelService.getGrandTotal(extractionResponseDtoList.get(0).getExtractionTask())+warn;
         ApiResponse<List<ExtractionResponseDto>> res = new ApiResponse<>(true,
@@ -79,7 +80,7 @@ public class ExcelController {
         Long ok = excelService.getTotalOk();
         Long warn = excelService.getTotalWarning();
         PagedModel<Extraction> extractions = excelService.getAllWarningExtractions(adjustedPage, size);
-        Long totalAmount = excelService.sumTotalAmountByStatus(0);
+        Long totalAmount = excelService.sumTotalAmountByStatus(Status.WARNING);
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Warned Data")
@@ -98,7 +99,7 @@ public class ExcelController {
         Long ok = excelService.getTotalOk();
         Long warn = excelService.getTotalWarning();
         PagedModel<Extraction> extractions = excelService.getAllOkExtractions(adjustedPage, size);
-        Long totalAmount = excelService.sumTotalAmountByStatus(1);
+        Long totalAmount = excelService.sumTotalAmountByStatus(Status.GOOD);
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Ok Data")
@@ -148,8 +149,8 @@ public class ExcelController {
                 .data(extractionsPagedModel)
                 .warn(null)
                 .ok(null)
-                .grandTotal(null)
-                .countAll(extractionsPagedModel.getMetadata().size())
+                .grandTotal(excelService.getRepo().sumTotalAmountByExtractionTaskAndStatus(extractionTaskRepository.getReferenceById(fileId),Status.WARNING))
+                .countAll(extractionsPagedModel.getMetadata().totalElements())
                 .build();
     }
 
@@ -171,7 +172,7 @@ public class ExcelController {
                 .warn(warn)
                 .ok(ok)
                 .grandTotal(totalAmount)
-                .countAll(total)
+                .countAll(extractions.getMetadata().totalElements())
                 .build();
     }
 
@@ -197,6 +198,8 @@ public class ExcelController {
             @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
             int adjustedPage = (page < 1) ? 0 : page - 1;
         PagedModel<Extraction> extractionsPagedModel  = excelService.getByDate(startDate,endDate,adjustedPage,size);
+        System.out.println(startDate);
+        System.out.println(endDate);
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Ok Data")
@@ -204,7 +207,7 @@ public class ExcelController {
                 .warn(excelService.getWarnCountByDate(startDate,endDate))
                 .ok(excelService.getOkCountByDate(startDate,endDate))
                 .grandTotal(excelService.sumByDate(startDate,endDate))
-                .countAll(extractionsPagedModel.getMetadata().size())
+                .countAll(extractionsPagedModel.getMetadata().totalElements())
                 .build();
     }
 
@@ -219,10 +222,10 @@ public class ExcelController {
                 .success(true)
                 .message("Ok Data")
                 .data(extractionsPagedModel)
-                .warn(excelService.countByTotalAmountAndStatus(amount,0))
-                .ok(excelService.countByTotalAmountAndStatus(amount,1))
+                .warn(excelService.countByTotalAmountAndStatus(amount,Status.WARNING))
+                .ok(excelService.countByTotalAmountAndStatus(amount,Status.GOOD))
                 .grandTotal(excelService.sumByTotalAmount(amount))
-                .countAll(extractionsPagedModel.getMetadata().size())
+                .countAll(extractionsPagedModel.getMetadata().totalElements())
                 .build();
 
     }
@@ -231,17 +234,17 @@ public class ExcelController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam("amount") Long amount,
-            @RequestParam("status") int status){
+            @RequestParam("status") Status status){
         int adjustedPage = (page < 1) ? 0 : page - 1;
         PagedModel<Extraction> extractionsPagedModel  = excelService.getByAmountAndStatus(amount,adjustedPage,size,status);
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Ok Data")
                 .data(extractionsPagedModel)
-                .warn(excelService.countByTotalAmountAndStatus(amount,0))
-                .ok(excelService.countByTotalAmountAndStatus(amount,1))
+                .warn(excelService.countByTotalAmountAndStatus(amount,Status.WARNING))
+                .ok(excelService.countByTotalAmountAndStatus(amount,Status.GOOD))
                 .grandTotal(excelService.getRepo().sumByTotalAmountAndStatus(amount,status))
-                .countAll(extractionsPagedModel.getMetadata().size())
+                .countAll(extractionsPagedModel.getMetadata().totalElements())
                 .build();
     }
 

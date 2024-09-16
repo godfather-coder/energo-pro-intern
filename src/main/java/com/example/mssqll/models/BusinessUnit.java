@@ -1,14 +1,20 @@
 package com.example.mssqll.models;
 
-
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.Nationalized;
+
 
 @Entity
 @Table(name = "business_units")
+@Getter
+@Setter
+@Data
 public class BusinessUnit {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
@@ -16,11 +22,23 @@ public class BusinessUnit {
     private Integer unitNumber;
 
     @Column(name = "name")
+    @Nationalized
     private String name;
 
     @Column(name = "unit_type_key")
     private Integer unitTypeKey;
 
-    @Column(name = "parent_id")
-    private Long parentId;
+    @ManyToOne
+    @JoinColumn(name = "parent_id", nullable = true)
+    private BusinessUnit parent;
+
+    @Override
+    public String toString() {
+        return "BusinessUnit{" +
+                "id=" + id +
+                ", unitNumber=" + unitNumber +
+                ", name='" + name + '\'' +
+                ", unitTypeKey=" + unitTypeKey +
+                '}';
+    }
 }

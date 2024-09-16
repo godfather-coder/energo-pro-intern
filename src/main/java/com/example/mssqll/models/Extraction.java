@@ -1,6 +1,5 @@
 package com.example.mssqll.models;
 
-import com.example.mssqll.dto.enumType.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,21 +18,23 @@ public class Extraction {
     private Long id;
 
     @Column(name = "date" )
-    private LocalDate date;
+    private LocalDate  date;//
 
     @Column(name = "total_amount", nullable = false)
-    private int totalAmount;
+    private int totalAmount;//
 
     @Column(name = "purpose", length = 255, nullable = false)
-    private String purpose;
+    private String purpose;//
 
     @Column(name = "description", length = 255, nullable = false)
     private String description;
 
-    @Column(name = "status", nullable = false)
-    private int status;
+    @Enumerated(EnumType.STRING) // Store the enum as a string in the database
+    @Column(name = "status")
+    private Status status;
+    
 
     @ManyToOne
     @JoinColumn(name = "extraction_task_id", nullable = false)
-    private ExtractionTask extractionTask;
+    private ExtractionTask extractionTask;//
 }

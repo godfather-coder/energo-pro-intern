@@ -1,6 +1,5 @@
 package com.example.mssqll.dto.request;
 
-import com.example.mssqll.dto.enumType.Status;
 import com.example.mssqll.models.ExtractionTask;
 import lombok.Builder;
 import lombok.Data;

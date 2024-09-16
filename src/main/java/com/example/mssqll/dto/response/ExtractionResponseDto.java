@@ -2,6 +2,7 @@ package com.example.mssqll.dto.response;
 
 
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.Status;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDate;
@@ -21,7 +22,7 @@ public class ExtractionResponseDto {
 
     private String description;
 
-    private int status;
+    private Status status;
 
     private ExtractionTask extractionTask;
 

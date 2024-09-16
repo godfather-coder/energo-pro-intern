@@ -2,7 +2,6 @@ package com.example.mssqll.models;
 
 import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import lombok.*;
@@ -21,6 +20,9 @@ public class ExtractionTask {
 
     private LocalDateTime date;
 
+    private LocalDateTime sendDate;
+    // statusis shecvla gadatanissas
+    //send_date gadatanis tarigi
     private String fileName;
 
     private int status;

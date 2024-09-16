@@ -3,6 +3,7 @@ package com.example.mssqll.service;
 import com.example.mssqll.dto.response.ExtractionResponseDto;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ExtractionRepository;
 import org.springframework.data.web.PagedModel;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ public interface ExcelService{
      Long getTotalExtractionCount();
      Long getGrandTotal();
      Long getExtractionCountByExtractionTaskId(ExtractionTask extractionTask);
-     Long sumTotalAmountByStatus(int status);
+     Long sumTotalAmountByStatus(Status status);
      Long getTotalAmountByExtractionTaskId(Long id);
      Long getCountWarningsByFileId(Long fileId) ;
      Long getCountOkByFileId(Long fileId) ;
@@ -37,7 +38,7 @@ public interface ExcelService{
      Long getOkCountByDate(LocalDate from, LocalDate to);
      Long sumByDate(LocalDate from, LocalDate to);
      PagedModel<Extraction> getByTotalAmount(Long totalAmount, int page, int size);
-     Long countByTotalAmountAndStatus(Long totalAmount, int status);
+     Long countByTotalAmountAndStatus(Long totalAmount, Status status);
      Long sumByTotalAmount(Long totalAmount);
-     PagedModel<Extraction> getByAmountAndStatus(Long total,int page, int size, int status);
+     PagedModel<Extraction> getByAmountAndStatus(Long total,int page, int size, Status status);
 }
