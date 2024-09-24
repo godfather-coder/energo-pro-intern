@@ -17,4 +17,5 @@ public interface ConnectionFeeService {
    void deleteById(Long id);
    ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails);
    PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec,int page, int size, String sortBy, String sortDir);
+   void deleteByTaskId(Long taskId);
 }

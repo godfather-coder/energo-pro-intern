@@ -1,10 +1,7 @@
 package com.example.mssqll.service.impl;
 
 
-import com.example.mssqll.models.ConnectionFee;
-import com.example.mssqll.models.Extraction;
-import com.example.mssqll.models.ExtractionTask;
-import com.example.mssqll.models.Status;
+import com.example.mssqll.models.*;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
@@ -20,6 +17,7 @@ import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -54,7 +52,11 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         if (extractionTaskOptional.isPresent()) {
             ExtractionTask extractionTask1 = extractionTaskOptional.get();
             List<Extraction> extractions = extractionRepository.findByExtractionTask(extractionTask1);
-            extractionTask1.setStatus(2);
+            if (extractionTask1.getStatus().equals(FileStatus.WARNING)) {
+                extractionTask1.setStatus(FileStatus.TRANSFERRED_WARNING);
+            } else {
+                extractionTask1.setStatus(FileStatus.TRANSFERRED_GOOD);
+            }
             extractionTask1.setSendDate(LocalDateTime.now());
             extractionTaskRepository.save(extractionTask1);
             List<ConnectionFee> fees = new ArrayList<>();
@@ -69,6 +71,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                                 .extractionTask(extraction.getExtractionTask())
                                 .description(extraction.getDescription())
                                 .extractionId(extraction.getId())
+                                .tax(extraction.getTax())
                                 .build()
                 );
             }
@@ -105,11 +108,13 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setOrderN(connectionFeeDetails.getOrderN());
         existingFee.setRegion(connectionFeeDetails.getRegion());
         existingFee.setServiceCenter(connectionFeeDetails.getServiceCenter());
-        existingFee.setProjectID(connectionFeeDetails.getProjectID());
         existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
         existingFee.setExtractionTask(connectionFeeDetails.getExtractionTask());
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
-        existingFee.setChangeDate(LocalDateTime.now());
+        if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
+            existingFee.setChangeDate(LocalDateTime.now());
+        }
+        existingFee.setProjectID(connectionFeeDetails.getProjectID());
         existingFee.setExtractionId(connectionFeeDetails.getExtractionId());
         existingFee.setNote(connectionFeeDetails.getNote());
         existingFee.setExtractionDate(connectionFeeDetails.getExtractionDate());
@@ -117,7 +122,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setPurpose(connectionFeeDetails.getPurpose());
         existingFee.setDescription(connectionFeeDetails.getDescription());
         existingFee.setStatus(Status.TRANSFER_COMPLETE);
-        if (connectionFeeDetails.getClarificationDate()==null) {
+        if (connectionFeeDetails.getClarificationDate() == null) {
             existingFee.setClarificationDate(LocalDateTime.now());
         } else {
             existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
@@ -126,9 +131,25 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     }
 
     @Override
-    public PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec,int page, int size, String sortBy, String sortDir) {
+    public PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        return new PagedModel<>( connectionFeeRepository.findAll(spec,PageRequest.of(page, size,sort)));
+        return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
+    }
+
+    @Override
+    public void deleteByTaskId(Long taskId) {
+        Optional<ExtractionTask> extractionTask = extractionTaskRepository.findById(taskId);
+        if (extractionTask.isPresent()) {
+            ExtractionTask extractionTask1 = extractionTask.get();
+            if (extractionTask1.getStatus().equals(FileStatus.TRANSFERRED_WARNING)) {
+                extractionTask1.setStatus(FileStatus.WARNING);
+            }else {
+                extractionTask1.setStatus(FileStatus.GOOD);
+            }
+            connectionFeeRepository.deleteByExtractionTaskId(taskId);
+        }
+
+
     }
 
 }

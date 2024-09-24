@@ -27,6 +27,7 @@ public class ConnectionFee {
     private Status status;
 
     @Column(name = "orderN")
+    @Nationalized
     private String orderN;
 
     @Column(name = "region")
@@ -38,9 +39,11 @@ public class ConnectionFee {
     private String serviceCenter;
 
     @Column(name = "project_id")
+    @Nationalized
     private String projectID;
 
     @Column(name = "withdraw_type")
+    @Nationalized
     private String withdrawType;
 
     @ManyToOne
@@ -53,7 +56,6 @@ public class ConnectionFee {
     @Column(name = "change_date")
     private LocalDateTime changeDate;
 
-    //gadatanis taritgi +
     @Column(name = "transfer_date")
     private LocalDateTime transferDate;
 
@@ -68,19 +70,25 @@ public class ConnectionFee {
     private LocalDate extractionDate;
 
     @Column(name = "total_amount", nullable = false)
-    private int totalAmount;
+    private Double totalAmount;
 
     @Column(name = "purpose", length = 255, nullable = false)
+    @Nationalized
     private String purpose;
 
     @Column(name = "description", length = 255, nullable = false)
+    @Nationalized
     private String description;
+
+    @Column(name = "tax_id", length = 255, nullable = false)
+    @Nationalized
+    private String tax;
 
     public ConnectionFee() {
 
     }
 
-    public ConnectionFee(String purpose, int totalAmount, LocalDate extractionDate, Status status, LocalDateTime transferDate, ExtractionTask extractionTask, String description, Long extractionId) {
+    public ConnectionFee(String purpose, Double totalAmount, LocalDate extractionDate, Status status, LocalDateTime transferDate, ExtractionTask extractionTask, String description, Long extractionId) {
         this.purpose = purpose;
         this.totalAmount = totalAmount;
         this.extractionDate = extractionDate;

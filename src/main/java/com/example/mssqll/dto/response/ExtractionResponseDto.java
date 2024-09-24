@@ -16,7 +16,7 @@ public class ExtractionResponseDto {
 
     private LocalDate date;
 
-    private int totalAmount;
+    private Double totalAmount;
 
     private String purpose;
 

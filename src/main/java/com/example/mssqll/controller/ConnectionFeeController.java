@@ -113,7 +113,7 @@ public class ConnectionFeeController {
             @RequestParam Map<String, String> filters,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "totalAmount")String sortBy,
+            @RequestParam(defaultValue = "id")String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDir) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
@@ -123,5 +123,14 @@ public class ConnectionFeeController {
                 .data(connectionFeeService.letDoFilter(spec,adjustedPage,size,sortBy,sortDir))
                 .build();
     }
+    @DeleteMapping("/delete-by-task/{extractionTaskId}")
+     public ApiResponse<List<ConnectionFee>> deleteConnectionFeeByTaskId(@PathVariable Long extractionTaskId) {
+        connectionFeeService.deleteByTaskId(extractionTaskId);
+        return ApiResponse.<List<ConnectionFee>>builder()
+                .success(true)
+                .message("Connections Deleted Successfully")
+                .build();
+    }
+
 
 }

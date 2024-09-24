@@ -3,6 +3,7 @@ package com.example.mssqll.service.impl;
 import com.example.mssqll.dto.response.ExtractionResponseDto;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.FileStatus;
 import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
@@ -11,9 +12,7 @@ import com.example.mssqll.service.ExcelService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,9 +39,8 @@ public class ExcelServiceImpl implements ExcelService {
     }
 
     public List<ExtractionResponseDto> readExcel(MultipartFile file) {
-        System.out.println("readExcel");
         LocalDateTime today = LocalDateTime.now();
-        ExtractionTask extTask = extractionTaskRepository.save(new ExtractionTask(today, file.getOriginalFilename(), 1));
+        ExtractionTask extTask = extractionTaskRepository.save(new ExtractionTask(today, file.getOriginalFilename(), FileStatus.GOOD));
         List<ExtractionResponseDto> extractionResponseDtoList = new ArrayList<>();
         try {
             XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
@@ -51,15 +49,16 @@ public class ExcelServiceImpl implements ExcelService {
                 boolean fileStatus = true;
                 System.out.println("Sheet: " + sheet.getSheetName());
                 for (Row row : sheet) {
-                    if (row.getRowNum() == 0) {
+                    if (row.getRowNum() <2) {
                         continue;
                     }
 
 
                     LocalDate date = null;
-                    int totalAmount = 0;
+                    Double totalAmount = (double) 0.0;
                     String purpose = "";
                     String description = "";
+                    String tax = "";
 
                     Status status = Status.GOOD;
 
@@ -79,9 +78,10 @@ public class ExcelServiceImpl implements ExcelService {
                                 case 1:
                                     if (!cellValue.isEmpty()) {
                                         try {
-                                            totalAmount = Integer.parseInt(cellValue);
+                                            totalAmount = Double.parseDouble(cellValue);
+                                            System.out.println(totalAmount);
                                         } catch (NumberFormatException e) {
-                                            totalAmount = 0;
+                                            totalAmount =  0.0;
                                         }
                                     }
                                     break;
@@ -91,11 +91,13 @@ public class ExcelServiceImpl implements ExcelService {
                                 case 3:
                                     description = cellValue;
                                     break;
+                                case 4:
+                                    tax = cellValue;
                             }
                         }
                     }
 
-                    if (date == null && totalAmount == 0 && purpose.isEmpty() && description.isEmpty()) {
+                    if (date == null && totalAmount == 0.0 && purpose.isEmpty() && description.isEmpty()) {
                         System.out.println("Skipping empty row: " + row.getRowNum());
                         System.out.println("2024-09-11T12:41:43.259+04:00  INFO 26028 --- [           main] com.example.mssqll.MssqllApplication     : Empty" +  "Line");
                         continue;
@@ -112,13 +114,14 @@ public class ExcelServiceImpl implements ExcelService {
                     extraction.setPurpose(purpose);
                     extraction.setDescription(description);
                     extraction.setStatus(status);
+                    extraction.setTax(tax);
                     extraction.setExtractionTask(extTask);
-
+                    System.out.println(extraction);
 
                     if (!fileStatus) {
-                        extTask.setStatus(0);
+                        extTask.setStatus(FileStatus.WARNING);
                     } else {
-                        extTask.setStatus(1);
+                        extTask.setStatus(FileStatus.GOOD);
                     }
                     extractionTaskRepository.save(extTask);
 
