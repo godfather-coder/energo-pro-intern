@@ -2,10 +2,10 @@ package com.example.mssqll.specifications;
 
 import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.Status;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +19,7 @@ public class ConnectionFeeSpecification {
     public static Specification<ConnectionFee> getSpecifications(Map<String, Object> filters) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.notEqual(root.get("status"), Status.SOFT_DELETED));
 
             filters.forEach((key, value) -> {
                 if (value != null) {
@@ -98,8 +99,13 @@ public class ConnectionFeeSpecification {
                                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("extractionDate"), extractionDateEnd));
                             }
                             break;
-                        case "totalAmount":
-                            predicates.add(criteriaBuilder.equal(root.get("totalAmount"), value));
+                        case "totalAmountStart":
+                            Double totalAmountStart = Double.parseDouble(value.toString());
+                            predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("totalAmount"),totalAmountStart));
+                            break;
+                        case "totalAmountEnd":
+                            Double totalAmountEnd = Double.parseDouble(value.toString());
+                            predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("totalAmount"),totalAmountEnd));
                             break;
                         case "purpose":
                             predicates.add(criteriaBuilder.like(root.get("purpose"), "%" + value + "%"));

@@ -198,8 +198,6 @@ public class ExcelController {
             @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
             int adjustedPage = (page < 1) ? 0 : page - 1;
         PagedModel<Extraction> extractionsPagedModel  = excelService.getByDate(startDate,endDate,adjustedPage,size);
-        System.out.println(startDate);
-        System.out.println(endDate);
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Ok Data")

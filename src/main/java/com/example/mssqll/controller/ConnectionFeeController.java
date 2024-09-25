@@ -9,8 +9,13 @@ import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.*;
 
 @RestController
@@ -113,18 +118,19 @@ public class ConnectionFeeController {
             @RequestParam Map<String, String> filters,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id")String sortBy,
+            @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDir) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
         return ApiResponse.<PagedModel<ConnectionFee>>builder()
                 .success(true)
                 .message("Filtered data")
-                .data(connectionFeeService.letDoFilter(spec,adjustedPage,size,sortBy,sortDir))
+                .data(connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir))
                 .build();
     }
+
     @DeleteMapping("/delete-by-task/{extractionTaskId}")
-     public ApiResponse<List<ConnectionFee>> deleteConnectionFeeByTaskId(@PathVariable Long extractionTaskId) {
+    public ApiResponse<List<ConnectionFee>> deleteConnectionFeeByTaskId(@PathVariable Long extractionTaskId) {
         connectionFeeService.deleteByTaskId(extractionTaskId);
         return ApiResponse.<List<ConnectionFee>>builder()
                 .success(true)
@@ -132,5 +138,41 @@ public class ConnectionFeeController {
                 .build();
     }
 
+    @DeleteMapping("/soft-delete/{fee}")
+    public ApiResponse<Void> softDeleteConnectionFee(@PathVariable Long fee) {
+        Optional<ConnectionFee> optionalConnectionFee = connectionFeeService.findById(fee);
 
+        if (optionalConnectionFee.isPresent()) {
+            connectionFeeService.softDeleteById(fee);
+
+            return ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Connection Fee deleted successfully")
+                    .build();
+        } else {
+
+            return ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Connection Fee not found")
+                    .build();
+        }
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<byte[]> downloadExcel() throws IOException {
+        // Fetch data from the database
+        List<ConnectionFee> connectionFees = connectionFeeService.getAllConnectionFees();
+
+        // Generate Excel file
+        ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFees);
+
+        // Set response headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=connection_fees.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelStream.readAllBytes());
+    }
 }

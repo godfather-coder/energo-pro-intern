@@ -6,6 +6,8 @@ import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ConnectionFeeService;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -14,6 +16,9 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +39,11 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         this.connectionFeeRepository = connectionFeeRepository;
         this.extractionRepository = extractionRepository;
         this.extractionTaskRepository = extractionTaskRepository;
+    }
+
+    @Override
+    public List<ConnectionFee> getAllConnectionFees() {
+        return connectionFeeRepository.findAll();
     }
 
     @Override
@@ -139,17 +149,105 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     @Override
     public void deleteByTaskId(Long taskId) {
         Optional<ExtractionTask> extractionTask = extractionTaskRepository.findById(taskId);
+
         if (extractionTask.isPresent()) {
             ExtractionTask extractionTask1 = extractionTask.get();
-            if (extractionTask1.getStatus().equals(FileStatus.TRANSFERRED_WARNING)) {
-                extractionTask1.setStatus(FileStatus.WARNING);
-            }else {
-                extractionTask1.setStatus(FileStatus.GOOD);
-            }
-            connectionFeeRepository.deleteByExtractionTaskId(taskId);
+            extractionTask1.setStatus(FileStatus.SOFT_DELETED);
+            ExtractionTask task = extractionTaskRepository.save(extractionTask1);
+            connectionFeeRepository.updateStatusByExtractionTask(Status.SOFT_DELETED, extractionTask1);
+
+        }
+    }
+
+    @Override
+    public void softDeleteById(Long id) {
+        ConnectionFee connectionFee = connectionFeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
+        connectionFee.setStatus(Status.SOFT_DELETED);
+        connectionFeeRepository.save(connectionFee);
+    }
+
+    @Override
+    public void softDeleteByTaskId(Long taskId) {
+
+    }
+
+    @Override
+    public ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException {
+        String[] columns = { "ID", "Order Number", "Region", "Service Center", "Project ID", "Withdraw Type", "Total Amount", "Purpose", "Description", "Tax" };
+
+        // Create a workbook
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Connection Fees");
+
+        // Create a row for the header
+        Row headerRow = sheet.createRow(0);
+
+        // Create header cells
+        for (int i = 0; i < columns.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(columns[i]);
         }
 
+        // Define cell styles with colors
+        CellStyle orangeStyle = workbook.createCellStyle();
+        orangeStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
+        orangeStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
+        CellStyle redStyle = workbook.createCellStyle();
+        redStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+        redStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        // Create other rows with data
+        int rowIdx = 1;
+        for (ConnectionFee connectionFee : connectionFees) {
+            Row row = sheet.createRow(rowIdx);
+
+            // Set the style for the 3rd row (index 2) to orange
+            if (rowIdx == 3) {
+                for (int i = 0; i < columns.length; i++) {
+                    Cell cell = row.createCell(i);
+                    cell.setCellValue(getCellValue(connectionFee, i));
+                    cell.setCellStyle(orangeStyle);  // Apply orange style
+                }
+            } else {
+                for (int i = 0; i < columns.length; i++) {
+                    Cell cell = row.createCell(i);
+                    cell.setCellValue(getCellValue(connectionFee, i));
+
+                    // Set the style for the 5th column (index 4) to red
+                    if (i == 4) {
+                        cell.setCellStyle(redStyle);  // Apply red style to the 5th column
+                    }
+                }
+            }
+            rowIdx++;
+        }
+
+        // Write the output to a byte array
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        workbook.write(out);
+        workbook.close();
+
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    // Helper method to get the value for each cell
+    private String getCellValue(ConnectionFee connectionFee, int columnIndex) {
+        switch (columnIndex) {
+            case 0: return String.valueOf(connectionFee.getId());
+            case 1: return null;
+            case 2: return connectionFee.getOrderN();
+            case 3: return connectionFee.getRegion();
+            case 4: return connectionFee.getServiceCenter(); // The 5th column will be styled in red
+            case 5: return connectionFee.getProjectID();
+            case 6: return connectionFee.getWithdrawType();
+            case 7: return String.valueOf(connectionFee.getTotalAmount());
+            case 8: return connectionFee.getPurpose();
+            case 9: return connectionFee.getDescription();
+            case 10: return connectionFee.getTax();
+            default: return "";
+        }
     }
 
 }

@@ -47,9 +47,8 @@ public class ExcelServiceImpl implements ExcelService {
             for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
                 Sheet sheet = workbook.getSheetAt(i);
                 boolean fileStatus = true;
-                System.out.println("Sheet: " + sheet.getSheetName());
                 for (Row row : sheet) {
-                    if (row.getRowNum() <2) {
+                    if (row.getRowNum() < 2) {
                         continue;
                     }
 
@@ -72,16 +71,20 @@ public class ExcelServiceImpl implements ExcelService {
                             switch (cellNum) {
                                 case 0:
                                     if (!cellValue.isEmpty()) {
-                                        date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                                        try {
+                                            date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                                        }catch (Exception e){
+                                            System.out.println(cellValue);
+                                            continue;
+                                        }
                                     }
                                     break;
                                 case 1:
                                     if (!cellValue.isEmpty()) {
                                         try {
                                             totalAmount = Double.parseDouble(cellValue);
-                                            System.out.println(totalAmount);
                                         } catch (NumberFormatException e) {
-                                            totalAmount =  0.0;
+                                            totalAmount = 0.0;
                                         }
                                     }
                                     break;
@@ -98,8 +101,6 @@ public class ExcelServiceImpl implements ExcelService {
                     }
 
                     if (date == null && totalAmount == 0.0 && purpose.isEmpty() && description.isEmpty()) {
-                        System.out.println("Skipping empty row: " + row.getRowNum());
-                        System.out.println("2024-09-11T12:41:43.259+04:00  INFO 26028 --- [           main] com.example.mssqll.MssqllApplication     : Empty" +  "Line");
                         continue;
                     }
 
@@ -116,7 +117,6 @@ public class ExcelServiceImpl implements ExcelService {
                     extraction.setStatus(status);
                     extraction.setTax(tax);
                     extraction.setExtractionTask(extTask);
-                    System.out.println(extraction);
 
                     if (!fileStatus) {
                         extTask.setStatus(FileStatus.WARNING);

@@ -17,7 +17,7 @@ public class ExtractionTaskServiceImpl implements ExtractionTaskService {
 
     @Override
     public PagedModel<ExtractionTask> getExtractionTasks(int page, int size) {
-        return new PagedModel<>(extractionTaskRepository.findAll(PageRequest.of(page, size)));
+        return new PagedModel<>(extractionTaskRepository.findAllByStatusDelete(PageRequest.of(page, size)));
     }
 
     @Override
