@@ -28,10 +28,12 @@ public interface ConnectionFeeRepository extends JpaRepository<ConnectionFee, Lo
 
     @Query(value = """
             WITH Descendants AS (
-                SELECT * FROM connection_fees WHERE parent_id = :parentId
+                SELECT * FROM connection_fees 
+                WHERE parent_id = :parentId AND status != 'SOFT_DELETED'
                 UNION ALL
                 SELECT cf.* FROM connection_fees cf
-                INNER JOIN Descendants d ON cf.parent_id = d.id
+                INNER JOIN Descendants d ON cf.parent_id = d.id 
+                WHERE cf.status != 'SOFT_DELETED'
             )
             SELECT * FROM Descendants;
             """, nativeQuery = true)

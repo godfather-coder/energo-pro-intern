@@ -156,36 +156,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     }
 
 
-    private ConnectionFeeChildrenDTO convertToDTO(ConnectionFee connectionFee) {
-        ConnectionFeeChildrenDTO dto = new ConnectionFeeChildrenDTO();
-        dto.setId(connectionFee.getId());
-        dto.setOrderN(connectionFee.getOrderN());
-        dto.setRegion(connectionFee.getRegion());
-        dto.setServiceCenter(connectionFee.getServiceCenter());
-        dto.setProjectID(connectionFee.getProjectID());
-        dto.setWithdrawType(connectionFee.getWithdrawType());
-        dto.setClarificationDate(connectionFee.getClarificationDate());
-        dto.setChangeDate(connectionFee.getChangeDate());
-        dto.setTransferDate(connectionFee.getTransferDate());
-        dto.setExtractionId(connectionFee.getExtractionId());
-        dto.setNote(connectionFee.getNote());
-        dto.setExtractionDate(connectionFee.getExtractionDate());
-        dto.setTotalAmount(connectionFee.getTotalAmount());
-        dto.setPurpose(connectionFee.getPurpose());
-        dto.setDescription(connectionFee.getDescription());
-        dto.setTax(connectionFee.getTax());
-
-        // Populate children recursively
-        if (connectionFee.getChildren() != null) {
-            List<ConnectionFeeChildrenDTO> children = connectionFee.getChildren().stream()
-                    .map(this::convertToDTO)
-                    .collect(Collectors.toList());
-            dto.setChildren(children);
-        }
-
-        return dto;
-    }
-
     @Override
     public void deleteByTaskId(Long taskId) {
         Optional<ExtractionTask> extractionTask = extractionTaskRepository.findById(taskId);

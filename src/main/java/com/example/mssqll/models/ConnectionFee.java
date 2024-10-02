@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ import java.util.List;
 @Setter
 @Builder
 @AllArgsConstructor
+@Where(clause = "status != 'SOFT_DELETED'")
 public class ConnectionFee {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -19,8 +19,7 @@ public class ConnectionFeeSpecification {
     public static Specification<ConnectionFee> getSpecifications(Map<String, Object> filters) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(criteriaBuilder.notEqual(root.get("status"), Status.SOFT_DELETED));
-
+            predicates.add(criteriaBuilder.isNull(root.get("parent")));
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {
