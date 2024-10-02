@@ -1,14 +1,20 @@
 package com.example.mssqll.service.impl;
 
 
+import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
 import com.example.mssqll.models.*;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ConnectionFeeService;
+import lombok.SneakyThrows;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ConnectionFeeServiceImpl implements ConnectionFeeService {
@@ -33,6 +40,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     private final ExtractionRepository extractionRepository;
     @Autowired
     private final ExtractionTaskRepository extractionTaskRepository;
+    @Autowired
+    private ConversionService conversionService;
 
     public ConnectionFeeServiceImpl(ConnectionFeeRepository connectionFeeRepository,
                                     ExtractionRepository extractionRepository, ExtractionTaskRepository extractionTaskRepository) {
@@ -140,10 +149,41 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return connectionFeeRepository.save(existingFee);
     }
 
-    @Override
+   @Override
     public PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
+    }
+
+
+    private ConnectionFeeChildrenDTO convertToDTO(ConnectionFee connectionFee) {
+        ConnectionFeeChildrenDTO dto = new ConnectionFeeChildrenDTO();
+        dto.setId(connectionFee.getId());
+        dto.setOrderN(connectionFee.getOrderN());
+        dto.setRegion(connectionFee.getRegion());
+        dto.setServiceCenter(connectionFee.getServiceCenter());
+        dto.setProjectID(connectionFee.getProjectID());
+        dto.setWithdrawType(connectionFee.getWithdrawType());
+        dto.setClarificationDate(connectionFee.getClarificationDate());
+        dto.setChangeDate(connectionFee.getChangeDate());
+        dto.setTransferDate(connectionFee.getTransferDate());
+        dto.setExtractionId(connectionFee.getExtractionId());
+        dto.setNote(connectionFee.getNote());
+        dto.setExtractionDate(connectionFee.getExtractionDate());
+        dto.setTotalAmount(connectionFee.getTotalAmount());
+        dto.setPurpose(connectionFee.getPurpose());
+        dto.setDescription(connectionFee.getDescription());
+        dto.setTax(connectionFee.getTax());
+
+        // Populate children recursively
+        if (connectionFee.getChildren() != null) {
+            List<ConnectionFeeChildrenDTO> children = connectionFee.getChildren().stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            dto.setChildren(children);
+        }
+
+        return dto;
     }
 
     @Override
@@ -174,7 +214,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     @Override
     public ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException {
-        String[] columns = { "ID", "Order Number", "Region", "Service Center", "Project ID", "Withdraw Type", "Total Amount", "Purpose", "Description", "Tax" };
+        String[] columns = {"ID", "Order Number", "Region", "Service Center", "Project ID", "Withdraw Type", "Total Amount", "Purpose", "Description", "Tax"};
 
         // Create a workbook
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -224,7 +264,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             rowIdx++;
         }
 
-        // Write the output to a byte array
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         workbook.write(out);
         workbook.close();
@@ -232,21 +271,97 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-    // Helper method to get the value for each cell
+
+    @SneakyThrows
+    @Override
+    public void divideFee(Long feeId, Double amount) {
+        Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(feeId);
+        ConnectionFee connectionFee1;
+        if (connectionFee.isPresent()) {
+            connectionFee1 = connectionFee.get();
+            Double maxAmount = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
+                    ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
+            if (maxAmount + amount > connectionFee1.getTotalAmount()) {
+                throw new Exception("Total amount must not grater than parent amount");
+            }
+            ConnectionFee feeCopy1 = new ConnectionFee(connectionFee1);
+            feeCopy1.setTotalAmount(amount);
+            feeCopy1.setParent(connectionFee1);
+            connectionFeeRepository.save(feeCopy1);
+        } else {
+            throw new ResourceNotFoundException("ConnectionFee not found with id: " + feeId);
+        }
+
+    }
+
+    @Override
+    public List<ConnectionFeeChildrenDTO> getFeesByParent(Long id) {
+        Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(id);
+        if (connectionFee.isPresent()) {
+            List<ConnectionFee> fees = connectionFeeRepository.findAllDescendants(id);
+
+            return fees.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        } else {
+            throw new ResourceNotFoundException("ConnectionFee not found with id: " + id);
+        }
+    }
+
+    private ConnectionFeeChildrenDTO convertToDto(ConnectionFee connectionFee) {
+        ConnectionFeeChildrenDTO dto = new ConnectionFeeChildrenDTO();
+        dto.setId(connectionFee.getId());
+        dto.setOrderN(connectionFee.getOrderN());
+        dto.setRegion(connectionFee.getRegion());
+        dto.setServiceCenter(connectionFee.getServiceCenter());
+        dto.setProjectID(connectionFee.getProjectID());
+        dto.setWithdrawType(connectionFee.getWithdrawType());
+        dto.setClarificationDate(connectionFee.getClarificationDate());
+        dto.setChangeDate(connectionFee.getChangeDate());
+        dto.setTransferDate(connectionFee.getTransferDate());
+        dto.setExtractionId(connectionFee.getExtractionId());
+        dto.setNote(connectionFee.getNote());
+        dto.setExtractionDate(connectionFee.getExtractionDate());
+        dto.setTotalAmount(connectionFee.getTotalAmount());
+        dto.setPurpose(connectionFee.getPurpose());
+        dto.setDescription(connectionFee.getDescription());
+        dto.setTax(connectionFee.getTax());
+
+        if (connectionFee.getChildren() != null) {
+            dto.setChildren(connectionFee.getChildren().stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList()));
+        }
+        return dto;
+    }
+
+
     private String getCellValue(ConnectionFee connectionFee, int columnIndex) {
         switch (columnIndex) {
-            case 0: return String.valueOf(connectionFee.getId());
-            case 1: return null;
-            case 2: return connectionFee.getOrderN();
-            case 3: return connectionFee.getRegion();
-            case 4: return connectionFee.getServiceCenter(); // The 5th column will be styled in red
-            case 5: return connectionFee.getProjectID();
-            case 6: return connectionFee.getWithdrawType();
-            case 7: return String.valueOf(connectionFee.getTotalAmount());
-            case 8: return connectionFee.getPurpose();
-            case 9: return connectionFee.getDescription();
-            case 10: return connectionFee.getTax();
-            default: return "";
+            case 0:
+                return String.valueOf(connectionFee.getId());
+            case 1:
+                return null;
+            case 2:
+                return connectionFee.getOrderN();
+            case 3:
+                return connectionFee.getRegion();
+            case 4:
+                return connectionFee.getServiceCenter();
+            case 5:
+                return connectionFee.getProjectID();
+            case 6:
+                return connectionFee.getWithdrawType();
+            case 7:
+                return String.valueOf(connectionFee.getTotalAmount());
+            case 8:
+                return connectionFee.getPurpose();
+            case 9:
+                return connectionFee.getDescription();
+            case 10:
+                return connectionFee.getTax();
+            default:
+                return "";
         }
     }
 

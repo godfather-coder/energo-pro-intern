@@ -1,8 +1,8 @@
 package com.example.mssqll.controller;
 
 
+import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
 import com.example.mssqll.models.ConnectionFee;
-import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.service.ConnectionFeeService;
 import com.example.mssqll.specifications.ConnectionFeeSpecification;
 import com.example.mssqll.utiles.resonse.ApiResponse;
@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -160,13 +161,10 @@ public class ConnectionFeeController {
 
     @GetMapping("/download")
     public ResponseEntity<byte[]> downloadExcel() throws IOException {
-        // Fetch data from the database
         List<ConnectionFee> connectionFees = connectionFeeService.getAllConnectionFees();
 
-        // Generate Excel file
         ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFees);
 
-        // Set response headers
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=connection_fees.xlsx");
 
@@ -175,4 +173,30 @@ public class ConnectionFeeController {
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelStream.readAllBytes());
     }
+
+    @PostMapping("/divide-fee/{id}/{amount}")
+    public ResponseEntity<String> divideFee(@PathVariable Long id, @PathVariable Double amount) {
+        try {
+            connectionFeeService.divideFee(id, amount);
+                return ResponseEntity.ok().body(
+                        "Divide Successfully"
+                );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    e.getMessage()
+            );
+        }
+    }
+
+    @GetMapping("/find-by-parent/{id}")
+    public ResponseEntity<List<ConnectionFeeChildrenDTO>> findByParent(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok().body(
+                    connectionFeeService.getFeesByParent(id)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.noContent().build();
+        }
+    }
+
 }

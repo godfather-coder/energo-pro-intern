@@ -1,6 +1,8 @@
 package com.example.mssqll.service;
 
+import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
 import com.example.mssqll.models.ConnectionFee;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 
@@ -19,9 +21,11 @@ public interface ConnectionFeeService {
    Optional<ConnectionFee> findById(Long id);
    void deleteById(Long id);
    ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails);
-   PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec,int page, int size, String sortBy, String sortDir);
+   PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir);
    void deleteByTaskId(Long taskId);
    void softDeleteById(Long id);
    void softDeleteByTaskId(Long taskId);
-   public ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException;
+   ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException;
+   void divideFee(Long feeId,Double amount);
+   List<ConnectionFeeChildrenDTO> getFeesByParent(Long id);
 }

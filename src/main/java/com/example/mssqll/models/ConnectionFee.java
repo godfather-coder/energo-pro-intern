@@ -1,11 +1,13 @@
 package com.example.mssqll.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Entity
@@ -84,6 +86,14 @@ public class ConnectionFee {
     @Nationalized
     private String tax;
 
+    @ManyToOne
+    @JsonIgnore
+    @JoinColumn(name = "parent_id", nullable = true)
+    private ConnectionFee parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    private List<ConnectionFee> children;
+
     public ConnectionFee() {
 
     }
@@ -97,5 +107,27 @@ public class ConnectionFee {
         this.extractionTask = extractionTask;
         this.description = description;
         this.extractionId = extractionId;
+    }
+
+
+    public ConnectionFee(ConnectionFee connectionFee) {
+        this.status = connectionFee.getStatus();
+        this.orderN = connectionFee.getOrderN();
+        this.region = connectionFee.getRegion();
+        this.serviceCenter = connectionFee.getServiceCenter();
+        this.projectID = connectionFee.getProjectID();
+        this.withdrawType = connectionFee.getWithdrawType();
+        this.extractionTask = connectionFee.getExtractionTask();
+        this.clarificationDate = connectionFee.getClarificationDate();
+        this.changeDate = connectionFee.getChangeDate();
+        this.transferDate = connectionFee.getTransferDate();
+        this.extractionId = connectionFee.getExtractionId();
+        this.note = connectionFee.getNote();
+        this.extractionDate = connectionFee.getExtractionDate();
+        this.totalAmount = connectionFee.getTotalAmount();
+        this.purpose = connectionFee.getPurpose();
+        this.description = connectionFee.getDescription();
+        this.tax = connectionFee.getTax();
+        this.parent = connectionFee.getParent();
     }
 }
