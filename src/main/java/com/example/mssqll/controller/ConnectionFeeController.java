@@ -174,13 +174,13 @@ public class ConnectionFeeController {
                 .body(excelStream.readAllBytes());
     }
 
-    @PostMapping("/divide-fee/{id}/{amount}")
-    public ResponseEntity<String> divideFee(@PathVariable Long id, @PathVariable Double amount) {
+    @PostMapping("/divide-fee/{id}")
+    public ResponseEntity<String> divideFee(@PathVariable Long id, @RequestBody Double[] arr) {
         try {
-            connectionFeeService.divideFee(id, amount);
-                return ResponseEntity.ok().body(
-                        "Divide Successfully"
-                );
+            connectionFeeService.divideFee(id,arr);
+            return ResponseEntity.ok().body(
+                    "Divide Successfully"
+            );
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     e.getMessage()

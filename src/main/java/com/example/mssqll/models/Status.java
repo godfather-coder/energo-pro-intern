@@ -5,5 +5,6 @@ public enum Status {
     GOOD,
     TRANSFERRED,
     TRANSFER_COMPLETE,
-    SOFT_DELETED
+    SOFT_DELETED,
+    CANCELD
 }

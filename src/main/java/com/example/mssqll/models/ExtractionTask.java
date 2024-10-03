@@ -21,12 +21,11 @@ public class ExtractionTask {
     private LocalDateTime date;
 
     private LocalDateTime sendDate;
-    // statusis shecvla gadatanissas
-    //send_date gadatanis tarigi
+
     private String fileName;
 
 
-    @Enumerated(EnumType.STRING) // Store the enum as a string in the database
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private FileStatus status;
 

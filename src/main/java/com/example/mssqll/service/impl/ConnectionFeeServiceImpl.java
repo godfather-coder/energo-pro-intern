@@ -11,10 +11,7 @@ import lombok.SneakyThrows;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -26,10 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -94,12 +88,10 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                                 .build()
                 );
             }
-
             return connectionFeeRepository.saveAll(fees);
         } else {
             throw new ResourceNotFoundException("Extraction task not found");
         }
-
     }
 
     @Override
@@ -149,7 +141,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return connectionFeeRepository.save(existingFee);
     }
 
-   @Override
+    @Override
     public PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
@@ -175,11 +167,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
         connectionFee.setStatus(Status.SOFT_DELETED);
         connectionFeeRepository.save(connectionFee);
-    }
-
-    @Override
-    public void softDeleteByTaskId(Long taskId) {
-
     }
 
     @Override
@@ -244,24 +231,48 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     @SneakyThrows
     @Override
-    public void divideFee(Long feeId, Double amount) {
+    public void divideFee(Long feeId, Double[] arr) {
+        Optional<Double> arrSum = Arrays.stream(arr).reduce(Double::sum);
         Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(feeId);
+        List<ConnectionFee> feeToAdd = new ArrayList<>();
+        ConnectionFee connectionFeeCopy;
         ConnectionFee connectionFee1;
         if (connectionFee.isPresent()) {
             connectionFee1 = connectionFee.get();
-            Double maxAmount = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
-                    ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
-            if (maxAmount + amount > connectionFee1.getTotalAmount()) {
-                throw new Exception("Total amount must not grater than parent amount");
+            if (arrSum.isPresent()) {
+                Double sum = arrSum.get();
+                if (sum != 0.0) {
+                    Double childSum = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
+                            ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
+                    if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
+                        for (Double d : arr) {
+                            if (d == 0.0) {
+                                continue;
+                            }
+                            connectionFeeCopy = new ConnectionFee(connectionFee1);
+                            connectionFeeCopy.setTotalAmount(d);
+                            connectionFeeCopy.setParent(connectionFee1);
+                            feeToAdd.add(connectionFeeCopy);
+                        }
+                        try {
+                            connectionFee1.setStatus(Status.CANCELD);
+                            connectionFeeRepository.save(connectionFee1);
+                            connectionFeeRepository.saveAll(feeToAdd);
+                        } catch (Exception e) {
+                            throw e;
+                        }
+                    } else {
+                        throw new Exception("Sum of element must not be grater than parent amount");
+                    }
+                } else {
+                    throw new Exception("Sum of array must be grater than 0");
+                }
+            } else {
+                throw new Exception("Sum of element must be floating pont number");
             }
-            ConnectionFee feeCopy1 = new ConnectionFee(connectionFee1);
-            feeCopy1.setTotalAmount(amount);
-            feeCopy1.setParent(connectionFee1);
-            connectionFeeRepository.save(feeCopy1);
         } else {
             throw new ResourceNotFoundException("ConnectionFee not found with id: " + feeId);
         }
-
     }
 
     @Override

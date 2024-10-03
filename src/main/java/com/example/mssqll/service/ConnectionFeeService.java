@@ -24,8 +24,7 @@ public interface ConnectionFeeService {
    PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir);
    void deleteByTaskId(Long taskId);
    void softDeleteById(Long id);
-   void softDeleteByTaskId(Long taskId);
    ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException;
-   void divideFee(Long feeId,Double amount);
+   void divideFee(Long feeId,Double[] arr);
    List<ConnectionFeeChildrenDTO> getFeesByParent(Long id);
 }
