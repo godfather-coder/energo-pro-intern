@@ -173,20 +173,16 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     public ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException {
         String[] columns = {"ID", "Order Number", "Region", "Service Center", "Project ID", "Withdraw Type", "Total Amount", "Purpose", "Description", "Tax"};
 
-        // Create a workbook
         XSSFWorkbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Connection Fees");
 
-        // Create a row for the header
         Row headerRow = sheet.createRow(0);
 
-        // Create header cells
         for (int i = 0; i < columns.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(columns[i]);
         }
 
-        // Define cell styles with colors
         CellStyle orangeStyle = workbook.createCellStyle();
         orangeStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
         orangeStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -195,12 +191,10 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         redStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
         redStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-        // Create other rows with data
         int rowIdx = 1;
         for (ConnectionFee connectionFee : connectionFees) {
             Row row = sheet.createRow(rowIdx);
 
-            // Set the style for the 3rd row (index 2) to orange
             if (rowIdx == 3) {
                 for (int i = 0; i < columns.length; i++) {
                     Cell cell = row.createCell(i);
@@ -212,9 +206,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     Cell cell = row.createCell(i);
                     cell.setCellValue(getCellValue(connectionFee, i));
 
-                    // Set the style for the 5th column (index 4) to red
                     if (i == 4) {
-                        cell.setCellStyle(redStyle);  // Apply red style to the 5th column
+                        cell.setCellStyle(redStyle);  
                     }
                 }
             }
