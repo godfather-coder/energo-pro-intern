@@ -1,5 +1,7 @@
 package com.example.mssqll.service.impl;
 
+import com.example.mssqll.dto.response.SignResponseDto;
+import com.example.mssqll.dto.response.UserResponseDto;
 import com.example.mssqll.models.JwtAuthenticationResponse;
 import com.example.mssqll.models.SignInRequest;
 import com.example.mssqll.models.SignUpRequest;
@@ -47,13 +49,25 @@ public class AuthenticationService {
     }
 
 
-    public JwtAuthenticationResponse signin(SignInRequest request) {
+    public SignResponseDto signin(SignInRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
         var jwt = jwtService.generateToken(user, false);
-        return JwtAuthenticationResponse.builder().token(jwt).build();
+        UserResponseDto userDto = UserResponseDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+        return SignResponseDto.builder().
+                jwtAuthenticationResponse(JwtAuthenticationResponse.builder().token(jwt).build())
+                .user(userDto)
+                .build();
     }
 
     public ResponseEntity<?> logout(@RequestHeader(name = "Authorization") String authorization) {

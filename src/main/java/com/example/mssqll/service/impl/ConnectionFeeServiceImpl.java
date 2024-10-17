@@ -11,11 +11,12 @@ import lombok.SneakyThrows;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.convert.ConversionService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 
@@ -34,8 +35,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     private final ExtractionRepository extractionRepository;
     @Autowired
     private final ExtractionTaskRepository extractionTaskRepository;
-    @Autowired
-    private ConversionService conversionService;
 
     public ConnectionFeeServiceImpl(ConnectionFeeRepository connectionFeeRepository,
                                     ExtractionRepository extractionRepository, ExtractionTaskRepository extractionTaskRepository) {
@@ -61,6 +60,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     @Override
     public List<ConnectionFee> saveFee(Long extractionTask) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
         Optional<ExtractionTask> extractionTaskOptional = extractionTaskRepository.findById(extractionTask);
         if (extractionTaskOptional.isPresent()) {
             ExtractionTask extractionTask1 = extractionTaskOptional.get();
@@ -85,6 +86,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                                 .description(extraction.getDescription())
                                 .extractionId(extraction.getId())
                                 .tax(extraction.getTax())
+                                .transferPearson(userDetails)
+                                .changePearson(userDetails)
                                 .build()
                 );
             }
@@ -114,7 +117,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     public ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails) {
         ConnectionFee existingFee = connectionFeeRepository.findById(connectionFeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + connectionFeeId));
-
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
         existingFee.setStatus(connectionFeeDetails.getStatus());
         existingFee.setOrderN(connectionFeeDetails.getOrderN());
         existingFee.setRegion(connectionFeeDetails.getRegion());
@@ -124,6 +128,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
             existingFee.setChangeDate(LocalDateTime.now());
+            existingFee.setChangePearson(userDetails);
         }
         existingFee.setProjectID(connectionFeeDetails.getProjectID());
         existingFee.setExtractionId(connectionFeeDetails.getExtractionId());

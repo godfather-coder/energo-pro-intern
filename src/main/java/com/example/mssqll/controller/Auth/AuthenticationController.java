@@ -1,6 +1,8 @@
 package com.example.mssqll.controller.Auth;
 
 
+import com.example.mssqll.dto.response.SignResponseDto;
+import com.example.mssqll.dto.response.UserResponseDto;
 import com.example.mssqll.models.JwtAuthenticationResponse;
 import com.example.mssqll.models.SignInRequest;
 import com.example.mssqll.models.SignUpRequest;
@@ -40,7 +42,7 @@ public class AuthenticationController {
     @PostMapping("/signin")
     public ResponseEntity<?> signIn(@RequestBody SignInRequest request) {
         try {
-            JwtAuthenticationResponse res = authenticationService.signin(request);
+            SignResponseDto res = authenticationService.signin(request);
             return ResponseEntity.ok(res);
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -51,26 +53,23 @@ public class AuthenticationController {
         }
     }
 
-    @PostMapping("/signout")
-    public ResponseEntity<?> signOut(@RequestBody SignInRequest request) {
-        try {
-            JwtAuthenticationResponse res = authenticationService.signin(request);
-            return ResponseEntity.ok(res);
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("მონაცემები არასწორია.");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("სერვერზე დავიქსირდა შეცდომა.");
-        }
-    }
+
 
     @GetMapping("/user")
     public ResponseEntity<?> getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         System.out.println(authentication.getPrincipal());
         User userDetails = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(userDetails);
+        UserResponseDto dto = UserResponseDto.builder()
+                .id(userDetails.getId())
+                .role(userDetails.getRole())
+                .email(userDetails.getEmail())
+                .updatedAt(userDetails.getUpdatedAt())
+                .firstName(userDetails.getFirstName())
+                .lastName(userDetails.getLastName())
+                .createdAt(userDetails.getCreatedAt())
+                .build();
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/logout")

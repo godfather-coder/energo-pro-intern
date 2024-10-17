@@ -177,7 +177,7 @@ public class ConnectionFeeController {
     @PostMapping("/divide-fee/{id}")
     public ResponseEntity<String> divideFee(@PathVariable Long id, @RequestBody Double[] arr) {
         try {
-            connectionFeeService.divideFee(id,arr);
+            connectionFeeService.divideFee(id, arr);
             return ResponseEntity.ok().body(
                     "Divide Successfully"
             );
