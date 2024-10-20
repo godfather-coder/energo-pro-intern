@@ -52,9 +52,9 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/signin").permitAll()
-                        .requestMatchers(HttpMethod.GET).permitAll()
+                                .requestMatchers(HttpMethod.GET).permitAll()
+//                        .requestMatchers(HttpMethod.PUT, "/api/v1/user").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/login").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider()).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

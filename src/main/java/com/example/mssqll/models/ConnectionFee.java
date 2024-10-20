@@ -89,12 +89,12 @@ public class ConnectionFee {
     private String tax;
 
     @ManyToOne
-    @JoinColumn(name = "transfer_pearson", nullable = false)
-    private User transferPearson;
+    @JoinColumn(name = "transfer_person", nullable = false)
+    private User transferPerson;
 
     @ManyToOne
-    @JoinColumn(name = "change_pearson", nullable = false)
-    private User changePearson;
+    @JoinColumn(name = "change_person", nullable = false)
+    private User changePerson;
 
 
     @ManyToOne

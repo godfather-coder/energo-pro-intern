@@ -16,9 +16,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<String>> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
-        ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    public ResponseEntity<?> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -40,14 +39,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(FileNotSupportedException.class)
-    public ResponseEntity<ApiResponse<String>> handleFileNotSupportedException(FileNotSupportedException ex, WebRequest request) {
-        ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<?> handleFileNotSupportedException(FileNotSupportedException ex, WebRequest request) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<String>> handleGlobalException(Exception ex, WebRequest request) {
-        ApiResponse<String> response = new ApiResponse<>(false, "An error occurred", null);
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
 }

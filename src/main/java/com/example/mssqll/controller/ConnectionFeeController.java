@@ -31,16 +31,12 @@ public class ConnectionFeeController {
     }
 
     @GetMapping
-    public ApiResponse<PagedModel<ConnectionFee>> getExtractions(
+    public ResponseEntity<PagedModel<ConnectionFee>> getExtractions(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         PagedModel<ConnectionFee> fees = connectionFeeService.getAllFee(adjustedPage, size);
-        return ApiResponse.<PagedModel<ConnectionFee>>builder()
-                .success(true)
-                .message("Operation successful")
-                .data(fees)
-                .build();
+        return ResponseEntity.ok().body(fees);
     }
 
     @GetMapping("/{id}")
@@ -61,61 +57,39 @@ public class ConnectionFeeController {
     }
 
     @PostMapping("/{extractionTaskId}")
-    public ApiResponse<List<ConnectionFee>> createConnectionFee(@PathVariable Long extractionTaskId) {
+    public ResponseEntity<List<ConnectionFee>> createConnectionFee(@PathVariable Long extractionTaskId) {
         List<ConnectionFee> createdConnectionFee = connectionFeeService.saveFee(extractionTaskId);
-
-        return ApiResponse.<List<ConnectionFee>>builder()
-                .success(true)
-                .message("Connection Fee created successfully")
-                .data(createdConnectionFee)
-                .build();
+        return ResponseEntity.ok().body(createdConnectionFee);
     }
 
     @PostMapping()
-    public ApiResponse<ConnectionFee> createConnectionFee(@RequestBody ConnectionFee connectionFee) {
+    public ResponseEntity<ConnectionFee> createConnectionFee(@RequestBody ConnectionFee connectionFee) {
         ConnectionFee fee = connectionFeeService.save(connectionFee);
-        return ApiResponse.<ConnectionFee>builder()
-                .success(true)
-                .message("Operation successful")
-                .data(fee)
-                .build();
+        return ResponseEntity.ok().body(fee);
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteConnectionFee(@PathVariable Long id) {
+    public ResponseEntity<?> deleteConnectionFee(@PathVariable Long id) {
         Optional<ConnectionFee> optionalConnectionFee = connectionFeeService.findById(id);
-
         if (optionalConnectionFee.isPresent()) {
             connectionFeeService.deleteById(id);
-
-            return ApiResponse.<Void>builder()
-                    .success(true)
-                    .message("Connection Fee deleted successfully")
-                    .build();
+            return ResponseEntity.ok().body(Collections.singletonMap("message", "Connection fee deleted successfully"));
         } else {
-
-            return ApiResponse.<Void>builder()
-                    .success(false)
-                    .message("Connection Fee not found")
-                    .build();
+            return ResponseEntity.ok().body(Collections.singletonMap("message", "Connection fee not found"));
         }
     }
 
     @PutMapping("/{connectionFeeId}")
-    public ApiResponse<ConnectionFee> updateConnectionFee(
+    public ResponseEntity<ConnectionFee> updateConnectionFee(
             @PathVariable Long connectionFeeId,
             @RequestBody ConnectionFee connectionFeeDetails) {
 
         ConnectionFee updatedConnectionFee = connectionFeeService.updateFee(connectionFeeId, connectionFeeDetails);
-        return ApiResponse.<ConnectionFee>builder()
-                .success(true)
-                .message("Connection Fee deleted successfully")
-                .data(updatedConnectionFee)
-                .build();
+        return ResponseEntity.ok().body(updatedConnectionFee);
     }
 
     @GetMapping("/filter")
-    public ApiResponse<PagedModel<ConnectionFee>> filterConnectionFees(
+    public ResponseEntity<PagedModel<ConnectionFee>> filterConnectionFees(
             @RequestParam Map<String, String> filters,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -123,39 +97,23 @@ public class ConnectionFeeController {
             @RequestParam(defaultValue = "ASC") String sortDir) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
-        return ApiResponse.<PagedModel<ConnectionFee>>builder()
-                .success(true)
-                .message("Filtered data")
-                .data(connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir))
-                .build();
+        return ResponseEntity.ok().body(connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir));
     }
 
     @DeleteMapping("/delete-by-task/{extractionTaskId}")
-    public ApiResponse<List<ConnectionFee>> deleteConnectionFeeByTaskId(@PathVariable Long extractionTaskId) {
+    public ResponseEntity<?> deleteConnectionFeeByTaskId(@PathVariable Long extractionTaskId) {
         connectionFeeService.deleteByTaskId(extractionTaskId);
-        return ApiResponse.<List<ConnectionFee>>builder()
-                .success(true)
-                .message("Connections Deleted Successfully")
-                .build();
+        return ResponseEntity.ok().body(Collections.singletonMap("message", "Connection fee deleted successfully"));
     }
 
     @DeleteMapping("/soft-delete/{fee}")
-    public ApiResponse<Void> softDeleteConnectionFee(@PathVariable Long fee) {
+    public ResponseEntity<?> softDeleteConnectionFee(@PathVariable Long fee) {
         Optional<ConnectionFee> optionalConnectionFee = connectionFeeService.findById(fee);
-
         if (optionalConnectionFee.isPresent()) {
             connectionFeeService.softDeleteById(fee);
-
-            return ApiResponse.<Void>builder()
-                    .success(true)
-                    .message("Connection Fee deleted successfully")
-                    .build();
+            return ResponseEntity.ok().body(Collections.singletonMap("message", "Connection fee deleted successfully"));
         } else {
-
-            return ApiResponse.<Void>builder()
-                    .success(false)
-                    .message("Connection Fee not found")
-                    .build();
+            return ResponseEntity.ok().body(Collections.singletonMap("message", "Connection fee not found"));
         }
     }
 

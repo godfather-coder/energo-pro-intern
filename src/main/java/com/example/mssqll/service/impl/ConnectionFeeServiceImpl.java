@@ -86,8 +86,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                                 .description(extraction.getDescription())
                                 .extractionId(extraction.getId())
                                 .tax(extraction.getTax())
-                                .transferPearson(userDetails)
-                                .changePearson(userDetails)
+                                .transferPerson(userDetails)
+                                .changePerson(userDetails)
                                 .build()
                 );
             }
@@ -128,7 +128,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
             existingFee.setChangeDate(LocalDateTime.now());
-            existingFee.setChangePearson(userDetails);
+            System.out.println(userDetails);
+            existingFee.setChangePerson(userDetails);
         }
         existingFee.setProjectID(connectionFeeDetails.getProjectID());
         existingFee.setExtractionId(connectionFeeDetails.getExtractionId());
@@ -212,7 +213,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     cell.setCellValue(getCellValue(connectionFee, i));
 
                     if (i == 4) {
-                        cell.setCellStyle(redStyle);  
+                        cell.setCellStyle(redStyle);
                     }
                 }
             }
@@ -230,6 +231,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     @SneakyThrows
     @Override
     public void divideFee(Long feeId, Double[] arr) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
+
         Optional<Double> arrSum = Arrays.stream(arr).reduce(Double::sum);
         Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(feeId);
         List<ConnectionFee> feeToAdd = new ArrayList<>();
@@ -250,6 +254,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeCopy = new ConnectionFee(connectionFee1);
                             connectionFeeCopy.setTotalAmount(d);
                             connectionFeeCopy.setParent(connectionFee1);
+                            connectionFeeCopy.setChangePerson(userDetails);
+                            connectionFeeCopy.setTransferPerson(userDetails);
                             feeToAdd.add(connectionFeeCopy);
                         }
                         try {

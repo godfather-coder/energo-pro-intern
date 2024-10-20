@@ -193,7 +193,6 @@ public class ExcelController {
                 .build();
     }
 
-    /// new task from davit 30.07.2024
     @GetMapping("/getByDate")
     public ApiResponse<PagedModel<Extraction>> getByDate(
             @RequestParam(defaultValue = "1") int page,
