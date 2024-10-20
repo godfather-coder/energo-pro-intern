@@ -1,5 +1,6 @@
 package com.example.mssqll.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -29,6 +30,7 @@ public class User implements UserDetails {
     @Column(unique = true)
     String email;
 
+    @JsonIgnore
     String password;
 
     @Enumerated(EnumType.STRING)

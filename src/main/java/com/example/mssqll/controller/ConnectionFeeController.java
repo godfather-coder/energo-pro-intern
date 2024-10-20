@@ -89,7 +89,7 @@ public class ConnectionFeeController {
     }
 
     @GetMapping("/filter")
-    public ResponseEntity<PagedModel<ConnectionFee>> filterConnectionFees(
+    public ResponseEntity<PagedModel<?>> filterConnectionFees(
             @RequestParam Map<String, String> filters,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
