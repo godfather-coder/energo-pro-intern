@@ -1,6 +1,7 @@
 package com.example.mssqll.specifications;
 
 import com.example.mssqll.models.Extraction;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -19,16 +20,20 @@ public class ExcelSpecification {
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {
+                        case "fileId":
+                            Join<Object, Object> extractionTaskJoin = root.join("extractionTask");
+                            predicates.add(criteriaBuilder.equal(extractionTaskJoin.get("id"), value));
+                            break;
                         case "tax":
                             predicates.add(criteriaBuilder.like(root.get("tax"), "%" + value + "%"));
                             break;
-                        case "dateStart":
+                        case "startDate":
                             LocalDate dateStart = parseToLocalDate(value.toString());
                             if (dateStart != null) {
                                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("date"), dateStart));
                             }
                             break;
-                        case "dateEnd":
+                        case "endDate":
                             LocalDate dateEnd = parseToLocalDate(value.toString());
                             if (dateEnd != null) {
                                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("date"), dateEnd));
