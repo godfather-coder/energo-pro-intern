@@ -35,15 +35,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDto updateUser(User user, Long id) {
         Optional<User> user12 = userRepository.findById(id);
-        System.out.println(user12);
         if (user12.isEmpty()) {
             throw new UsernameNotFoundException("User not found");
         } else {
             User user1 = user12.get();
             user1.setFirstName(user.getFirstName());
             user1.setLastName(user.getLastName());
-            user1.setPassword(passwordEncoder.encode(user.getPassword()));
+            if(user.getPassword() !=(null)){
+                user1.setPassword(passwordEncoder.encode(user.getPassword()));
+            }
             user1.setEmail(user.getEmail());
+            user1.setRole(user.getRole());
             user1.setUpdatedAt(LocalDateTime.now());
             userRepository.save(user1);
 

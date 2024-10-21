@@ -79,7 +79,6 @@ public class ExcelServiceImpl implements ExcelService {
                                         try {
                                             date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
                                         } catch (Exception e) {
-                                            System.out.println(cellValue);
                                             continue;
                                         }
                                     }

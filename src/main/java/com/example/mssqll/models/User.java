@@ -3,6 +3,7 @@ package com.example.mssqll.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Nationalized;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,14 +25,15 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @Nationalized
     String firstName;
 
+    @Nationalized
     String lastName;
 
     @Column(unique = true)
     String email;
 
-    @JsonIgnore
     String password;
 
     @Enumerated(EnumType.STRING)

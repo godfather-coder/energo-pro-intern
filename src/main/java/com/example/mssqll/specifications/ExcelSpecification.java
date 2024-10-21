@@ -64,7 +64,6 @@ public class ExcelSpecification {
     }
 
     private static LocalDate parseToLocalDate(String dateStr) {
-        System.out.println(dateStr);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-M-d");
         try {
             return LocalDate.parse(dateStr, formatter);

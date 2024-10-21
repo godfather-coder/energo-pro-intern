@@ -10,12 +10,15 @@ import com.example.mssqll.models.User;
 import com.example.mssqll.service.impl.AuthenticationService;
 import com.example.mssqll.utiles.exceptions.UserAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
+import org.openxmlformats.schemas.spreadsheetml.x2006.main.STIconSetType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
 
 
 @RestController
@@ -41,15 +44,18 @@ public class AuthenticationController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> signIn(@RequestBody SignInRequest request) {
+        HashMap<String,String> response = new HashMap<>();
         try {
             SignResponseDto res = authenticationService.signin(request);
             return ResponseEntity.ok(res);
         } catch (BadCredentialsException e) {
+            response.put("error", "მონაცემები არასწორია.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("მონაცემები არასწორია.");
+                    .body(response);
         } catch (Exception e) {
+             response.put("error", "მონაცემები არასწორია.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("სერვერზე დავიქსირდა შეცდომა.");
+                    .body(response);
         }
     }
 
@@ -58,7 +64,6 @@ public class AuthenticationController {
     @GetMapping("/user")
     public ResponseEntity<?> getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication.getPrincipal());
         User userDetails = (User) authentication.getPrincipal();
         UserResponseDto dto = UserResponseDto.builder()
                 .id(userDetails.getId())

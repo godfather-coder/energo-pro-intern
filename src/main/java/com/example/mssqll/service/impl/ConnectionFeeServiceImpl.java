@@ -128,7 +128,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
             existingFee.setChangeDate(LocalDateTime.now());
-            System.out.println(userDetails);
             existingFee.setChangePerson(userDetails);
         }
         existingFee.setProjectID(connectionFeeDetails.getProjectID());
