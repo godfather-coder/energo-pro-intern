@@ -199,62 +199,8 @@ public class ExcelController {
                 .build();
     }
 
-    @GetMapping("/getByDate")
-    public ApiResponse<PagedModel<Extraction>> getByDate(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        int adjustedPage = (page < 1) ? 0 : page - 1;
-        PagedModel<Extraction> extractionsPagedModel = excelService.getByDate(startDate, endDate, adjustedPage, size);
-        return ApiResponse.<PagedModel<Extraction>>builder()
-                .success(true)
-                .message("Ok Data")
-                .data(extractionsPagedModel)
-                .warn(excelService.getWarnCountByDate(startDate, endDate))
-                .ok(excelService.getOkCountByDate(startDate, endDate))
-                .grandTotal(excelService.sumByDate(startDate, endDate))
-                .countAll(extractionsPagedModel.getMetadata().totalElements())
-                .build();
-    }
 
-    @GetMapping("/getByAmount")
-    public ApiResponse<PagedModel<Extraction>> getByPrice(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam("amount") Long amount) {
-        int adjustedPage = (page < 1) ? 0 : page - 1;
-        PagedModel<Extraction> extractionsPagedModel = excelService.getByTotalAmount(amount, adjustedPage, size);
-        return ApiResponse.<PagedModel<Extraction>>builder()
-                .success(true)
-                .message("Ok Data")
-                .data(extractionsPagedModel)
-                .warn(excelService.countByTotalAmountAndStatus(amount, Status.WARNING))
-                .ok(excelService.countByTotalAmountAndStatus(amount, Status.GOOD))
-                .grandTotal(excelService.sumByTotalAmount(amount))
-                .countAll(extractionsPagedModel.getMetadata().totalElements())
-                .build();
 
-    }
-
-    @GetMapping("/getByAmountAndStatus")
-    public ApiResponse<PagedModel<Extraction>> getByAmountAndStatus(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam("amount") Long amount,
-            @RequestParam("status") Status status) {
-        int adjustedPage = (page < 1) ? 0 : page - 1;
-        PagedModel<Extraction> extractionsPagedModel = excelService.getByAmountAndStatus(amount, adjustedPage, size, status);
-        return ApiResponse.<PagedModel<Extraction>>builder()
-                .success(true)
-                .message("Ok Data")
-                .data(extractionsPagedModel)
-                .warn(excelService.countByTotalAmountAndStatus(amount, Status.WARNING))
-                .ok(excelService.countByTotalAmountAndStatus(amount, Status.GOOD))
-                .grandTotal(excelService.getRepo().sumByTotalAmountAndStatus(amount, status))
-                .countAll(extractionsPagedModel.getMetadata().totalElements())
-                .build();
-    }
 
     @GetMapping("/filter")
     public ResponseEntity<Map<?, ?>> filterConnectionFees(
