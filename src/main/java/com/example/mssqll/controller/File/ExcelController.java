@@ -1,23 +1,29 @@
 package com.example.mssqll.controller.File;
 
 import com.example.mssqll.dto.response.ExtractionResponseDto;
+import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
+import com.example.mssqll.specifications.ConnectionFeeSpecification;
+import com.example.mssqll.specifications.ExcelSpecification;
 import com.example.mssqll.utiles.exceptions.FileNotSupportedException;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/excels")
@@ -250,4 +256,15 @@ public class ExcelController {
                 .build();
     }
 
+    @GetMapping("/filter")
+    public ResponseEntity<Map<?, ?>> filterConnectionFees(
+            @RequestParam Map<String, String> filters,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDir) {
+        int adjustedPage = (page < 1) ? 0 : page - 1;
+        Specification<Extraction> spec = ExcelSpecification.getSpecifications((Map) filters);
+        return ResponseEntity.ok().body(excelService.letsDoExtractionFilter(spec, adjustedPage, size, sortBy, sortDir));
+    }
 }

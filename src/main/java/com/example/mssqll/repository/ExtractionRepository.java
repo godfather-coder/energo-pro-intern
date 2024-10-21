@@ -5,6 +5,7 @@ import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.models.Status;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,19 +16,26 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface ExtractionRepository extends JpaRepository<Extraction,Long>
-{
+public interface ExtractionRepository extends JpaRepository<Extraction, Long>, JpaSpecificationExecutor<Extraction> {
     Page<Extraction> findByStatus(Status status, Pageable pageable);
+
     Page<Extraction> findByExtractionTaskIdAndStatus(Long ExtractionTaskId, Status status, Pageable pageable);
+
     Page<Extraction> findByExtractionTaskId(Long ExtractionTaskId, Pageable pageable);
+
     List<Extraction> findByExtractionTask(ExtractionTask extractionTask);
+
     @Query("SELECT SUM(e.totalAmount) FROM Extraction e WHERE e.extractionTask = :extractionTask")
     Long sumTotalAmountByExtractionTask(@Param("extractionTask") ExtractionTask extractionTask);
+
     @Query("SELECT SUM(e.totalAmount) FROM Extraction e")
     Long sumTotalAmount();
+
     Long countAllByStatus(Status status);
+
     @Query("SELECT SUM(e.totalAmount) FROM Extraction e WHERE e.status = :status")
     Long sumTotalAmountByStatus(@Param("status") Status status);
+
     Long countAllByExtractionTaskId(Long ExtractionTaskId);
 
     @Query("SELECT SUM(e.totalAmount) FROM Extraction e WHERE e.extractionTask = :extractionTask AND e.status = :status")
@@ -59,7 +67,7 @@ public interface ExtractionRepository extends JpaRepository<Extraction,Long>
     Page<Extraction> findByTotalAmount(Long totalAmount, Pageable pageable);
 
     @Query("SELECT e from Extraction e where e.totalAmount = :total AND e.status = :status")
-    Page<Extraction> findByTotalAmountAndStatus(@Param("total") Long total, Pageable pageable,@Param("status") Status status);
+    Page<Extraction> findByTotalAmountAndStatus(@Param("total") Long total, Pageable pageable, @Param("status") Status status);
 
     @Query("SELECT COUNT(e) from Extraction e where e.totalAmount = :total AND e.status = :status")
     Long countByTotalAmountAndStatus(@Param("total") Long total, @Param("status") Status status);
@@ -69,4 +77,5 @@ public interface ExtractionRepository extends JpaRepository<Extraction,Long>
 
     @Query("SELECT SUM(e.totalAmount) from Extraction e where e.totalAmount = :total AND e.status = :status")
     Long sumByTotalAmountAndStatus(@Param("total") Long total, @Param("status") Status status);
+
 }

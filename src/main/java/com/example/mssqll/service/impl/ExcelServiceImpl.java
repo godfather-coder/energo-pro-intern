@@ -1,18 +1,23 @@
 package com.example.mssqll.service.impl;
 
 import com.example.mssqll.dto.response.ExtractionResponseDto;
-import com.example.mssqll.models.Extraction;
-import com.example.mssqll.models.ExtractionTask;
-import com.example.mssqll.models.FileStatus;
-import com.example.mssqll.models.Status;
+import com.example.mssqll.models.*;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,14 +27,14 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 
 @RequiredArgsConstructor
 @Service
 public class ExcelServiceImpl implements ExcelService {
+    @Autowired
+    private EntityManager entityManager;
     private final ExtractionRepository extractionRepository;
     private final ExtractionTaskRepository extractionTaskRepository;
     private final ConnectionFeeRepository connectionFeeRepository;
@@ -73,7 +78,7 @@ public class ExcelServiceImpl implements ExcelService {
                                     if (!cellValue.isEmpty()) {
                                         try {
                                             date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                                        }catch (Exception e){
+                                        } catch (Exception e) {
                                             System.out.println(cellValue);
                                             continue;
                                         }
@@ -307,6 +312,36 @@ public class ExcelServiceImpl implements ExcelService {
     @Override
     public PagedModel<Extraction> getByAmountAndStatus(Long total, int page, int size, Status status) {
         return new PagedModel<>(extractionRepository.findByTotalAmountAndStatus(total, PageRequest.of(page, size), status));
+    }
+
+    @Override
+    public Map<String, Object> letsDoExtractionFilter(Specification<Extraction> spec, int page, int size, String sortBy, String sortDir) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+
+        // Fetch paginated results for the given Specification
+        PagedModel<Extraction> excPage = new PagedModel<>(extractionRepository.findAll(spec, PageRequest.of(page, size, sort)));
+
+        // Calculate the sum of totalAmount using CriteriaBuilder
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Double> sumQuery = cb.createQuery(Double.class);
+        Root<Extraction> root = sumQuery.from(Extraction.class);
+        sumQuery.select(cb.sum(root.get("totalAmount")));
+
+        // Apply Specification as Predicate (if exists)
+        Predicate predicate = spec.toPredicate(root, sumQuery, cb);
+        if (predicate != null) {
+            sumQuery.where(predicate);
+        }
+
+        // Execute the sum query
+        Double totalAmountSum = entityManager.createQuery(sumQuery).getSingleResult();
+
+        // Prepare the response map
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalAmountSum", totalAmountSum);
+        response.put("excPage", excPage);
+
+        return response;
     }
 
     @Override
