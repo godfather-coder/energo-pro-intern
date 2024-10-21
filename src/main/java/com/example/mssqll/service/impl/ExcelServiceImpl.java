@@ -1,18 +1,23 @@
 package com.example.mssqll.service.impl;
 
 import com.example.mssqll.dto.response.ExtractionResponseDto;
-import com.example.mssqll.models.Extraction;
-import com.example.mssqll.models.ExtractionTask;
-import com.example.mssqll.models.FileStatus;
-import com.example.mssqll.models.Status;
+import com.example.mssqll.models.*;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,14 +27,14 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 
 @RequiredArgsConstructor
 @Service
 public class ExcelServiceImpl implements ExcelService {
+    @Autowired
+    private EntityManager entityManager;
     private final ExtractionRepository extractionRepository;
     private final ExtractionTaskRepository extractionTaskRepository;
     private final ConnectionFeeRepository connectionFeeRepository;
@@ -73,7 +78,7 @@ public class ExcelServiceImpl implements ExcelService {
                                     if (!cellValue.isEmpty()) {
                                         try {
                                             date = LocalDate.parse(cellValue, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                                        }catch (Exception e){
+                                        } catch (Exception e) {
                                             System.out.println(cellValue);
                                             continue;
                                         }
@@ -308,6 +313,59 @@ public class ExcelServiceImpl implements ExcelService {
     public PagedModel<Extraction> getByAmountAndStatus(Long total, int page, int size, Status status) {
         return new PagedModel<>(extractionRepository.findByTotalAmountAndStatus(total, PageRequest.of(page, size), status));
     }
+
+    @Override
+public Map<String, Object> letsDoExtractionFilter(Specification<Extraction> spec, int page, int size, String sortBy, String sortDir) {
+    Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+
+    PagedModel<Extraction> excPage = new PagedModel<>(extractionRepository.findAll(spec, PageRequest.of(page, size, sort)));
+
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+    CriteriaQuery<Double> sumQuery = cb.createQuery(Double.class);
+    Root<Extraction> sumRoot = sumQuery.from(Extraction.class);
+    sumQuery.select(cb.sum(sumRoot.get("totalAmount")));
+
+    Predicate sumPredicate = spec.toPredicate(sumRoot, sumQuery, cb);
+    if (sumPredicate != null) {
+        sumQuery.where(sumPredicate);
+    }
+    Double totalAmountSum = entityManager.createQuery(sumQuery).getSingleResult();
+
+    CriteriaQuery<Long> countGoodQuery = cb.createQuery(Long.class);
+    Root<Extraction> goodRoot = countGoodQuery.from(Extraction.class);
+    countGoodQuery.select(cb.count(goodRoot));
+
+    Predicate goodPredicate = spec.toPredicate(goodRoot, countGoodQuery, cb);
+    Predicate goodStatusPredicate = cb.equal(goodRoot.get("status"), Status.GOOD);
+    if (goodPredicate != null) {
+        countGoodQuery.where(cb.and(goodPredicate, goodStatusPredicate));
+    } else {
+        countGoodQuery.where(goodStatusPredicate);
+    }
+    Long goodCount = entityManager.createQuery(countGoodQuery).getSingleResult();
+
+    CriteriaQuery<Long> countWarnQuery = cb.createQuery(Long.class);
+    Root<Extraction> warnRoot = countWarnQuery.from(Extraction.class);
+    countWarnQuery.select(cb.count(warnRoot));
+
+    Predicate warnPredicate = spec.toPredicate(warnRoot, countWarnQuery, cb);
+    Predicate warnStatusPredicate = cb.equal(warnRoot.get("status"), Status.WARNING);
+    if (warnPredicate != null) {
+        countWarnQuery.where(cb.and(warnPredicate, warnStatusPredicate));
+    } else {
+        countWarnQuery.where(warnStatusPredicate);
+    }
+    Long warnCount = entityManager.createQuery(countWarnQuery).getSingleResult();
+
+    Map<String, Object> response = new HashMap<>();
+    response.put("totalAmountSum", totalAmountSum);
+    response.put("excPage", excPage);
+    response.put("ok", goodCount);
+    response.put("warn", warnCount);
+
+    return response;
+}
 
     @Override
     public ExtractionRepository getRepo() {

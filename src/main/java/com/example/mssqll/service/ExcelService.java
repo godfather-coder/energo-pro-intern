@@ -5,11 +5,13 @@ import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ExtractionRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 
 public interface ExcelService{
@@ -41,4 +43,5 @@ public interface ExcelService{
      Long countByTotalAmountAndStatus(Long totalAmount, Status status);
      Long sumByTotalAmount(Long totalAmount);
      PagedModel<Extraction> getByAmountAndStatus(Long total,int page, int size, Status status);
+     Map<String, Object> letsDoExtractionFilter(Specification<Extraction> spec, int page, int size, String sortBy, String sortDir);
 }

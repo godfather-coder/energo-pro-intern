@@ -3,6 +3,7 @@ package com.example.mssqll.models;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDate;
 
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @ToString
+@Where(clause = "status != 'SOFT_DELETED'")
 public class Extraction {
 
     @Id
@@ -30,9 +32,9 @@ public class Extraction {
 
     @Column(name = "description", length = 255, nullable = false)
     @Nationalized
-    private String description;
+    private String description;//////
 
-    @Enumerated(EnumType.STRING) // Store the enum as a string in the database
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private Status status;
 
