@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,12 +30,9 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        String isDeleted = userService.deleteUser(id);
+        UserResponseDto isDeleted = userService.deleteUser(id);
         Map<String, Object> response = new HashMap<>();
-        response.put("message", isDeleted);
-        if (isDeleted.equals("User not found")) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-        }
+        response.put("user", isDeleted);
         return ResponseEntity.ok(response);
     }
 

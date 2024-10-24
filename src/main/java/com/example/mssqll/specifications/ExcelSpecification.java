@@ -4,7 +4,6 @@ import com.example.mssqll.models.Extraction;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -23,9 +22,6 @@ public class ExcelSpecification {
                         case "fileId":
                             Join<Object, Object> extractionTaskJoin = root.join("extractionTask");
                             predicates.add(criteriaBuilder.equal(extractionTaskJoin.get("id"), value));
-                            break;
-                        case "tax":
-                            predicates.add(criteriaBuilder.like(root.get("tax"), "%" + value + "%"));
                             break;
                         case "startDate":
                             LocalDate dateStart = parseToLocalDate(value.toString());
@@ -49,6 +45,9 @@ public class ExcelSpecification {
                             break;
                         case "purpose":
                             predicates.add(criteriaBuilder.like(root.get("purpose"), "%" + value + "%"));
+                            break;
+                        case "tax":
+                            predicates.add(criteriaBuilder.like(root.get("tax"),  value + "%"));
                             break;
                         case "description":
                             predicates.add(criteriaBuilder.like(root.get("description"), "%" + value + "%"));

@@ -1,13 +1,11 @@
 package com.example.mssqll.controller.File;
 
 import com.example.mssqll.dto.response.ExtractionResponseDto;
-import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.Extraction;
 import com.example.mssqll.models.ExtractionTask;
 import com.example.mssqll.models.Status;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ExcelService;
-import com.example.mssqll.specifications.ConnectionFeeSpecification;
 import com.example.mssqll.specifications.ExcelSpecification;
 import com.example.mssqll.utiles.exceptions.FileNotSupportedException;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
@@ -15,13 +13,11 @@ import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +29,7 @@ public class ExcelController {
     @Autowired
     private ExtractionTaskRepository extractionTaskRepository;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping("/upload")
     public ApiResponse<List<ExtractionResponseDto>> handleFileUpload(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -99,6 +95,7 @@ public class ExcelController {
                 .countAll(warn)
                 .build();
     }
+
 
     @GetMapping("/extractions/ok")
     public ApiResponse<PagedModel<Extraction>> getOkExtractions(
@@ -173,7 +170,6 @@ public class ExcelController {
         Long warn = excelService.getTotalWarning();
         PagedModel<Extraction> extractions = excelService.getAllOkExtractionsWithFile(adjustedPage, size, fileId);
         Long totalAmount = excelService.getTotalAmountByExtractionTaskId(fileId);
-        Long total = excelService.getExtractionCountByExtractionTaskId(extractionTaskRepository.getReferenceById(fileId));
         return ApiResponse.<PagedModel<Extraction>>builder()
                 .success(true)
                 .message("Ok Data")
@@ -185,6 +181,7 @@ public class ExcelController {
                 .build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @DeleteMapping("/delete")
     public ApiResponse<ExtractionTask> deleteExtractionTask(@RequestParam Long taskId) {
         excelService.deleteById(taskId);

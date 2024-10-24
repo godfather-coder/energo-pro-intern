@@ -1,20 +1,23 @@
 package com.example.mssqll.service.impl;
 
 import com.example.mssqll.dto.response.TokenValidationResult;
+import com.example.mssqll.models.Role;
+import com.example.mssqll.models.User;
+import com.example.mssqll.utiles.exceptions.UserIsDeletedException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
 
@@ -77,6 +80,11 @@ public class JwtService {
 
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, Boolean logout) {
         try {
+            List<String> roles = new ArrayList<>();
+            for (GrantedAuthority authority : userDetails.getAuthorities()) {
+                roles.add(authority.getAuthority());
+            }
+            extraClaims.put("roles", roles);
             String tok = Jwts
                     .builder()
                     .setClaims(extraClaims)
@@ -120,9 +128,27 @@ public class JwtService {
             Claims claims = extractAllClaims(token);
 
             String username = claims.getSubject();
+
             if (!username.equals(userDetails.getUsername())) {
                 return new TokenValidationResult(false, "Username does not match token.");
             }
+
+            List<String> tokenRoles = claims.get("roles", List.class);
+
+            Collection<? extends GrantedAuthority> userRoles = userDetails.getAuthorities();
+
+            if (tokenRoles.contains("SOFT_DELETED")) {
+                return new TokenValidationResult(false, "User is deleted . Access denied.");
+            }
+
+            boolean hasMatchingRole = userRoles.stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch(tokenRoles::contains);
+
+            if (!hasMatchingRole) {
+                return new TokenValidationResult(false, "User role does not match token.");
+            }
+
 
             if (isTokenExpired(token)) {
                 return new TokenValidationResult(false, "JWT token is expired.");
@@ -148,5 +174,30 @@ public class JwtService {
         }
     }
 
+    public TokenValidationResult validateTokenWithoutUserName(String token) {
+        try {
+            if (isTokenExpired(token)) {
+                return new TokenValidationResult(false, "JWT token is expired.");
+            }
+
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                return new TokenValidationResult(false, "JWT token is blacklisted.");
+            }
+
+            return new TokenValidationResult(true, "Token is valid.");
+        } catch (ExpiredJwtException e) {
+            return new TokenValidationResult(false, "JWT token is expired.");
+        } catch (UnsupportedJwtException e) {
+            return new TokenValidationResult(false, "Unsupported JWT token.");
+        } catch (MalformedJwtException e) {
+            return new TokenValidationResult(false, "Invalid JWT token.");
+        } catch (SignatureException e) {
+            return new TokenValidationResult(false, "Invalid JWT signature.");
+        } catch (IllegalArgumentException e) {
+            return new TokenValidationResult(false, "JWT claims string is empty.");
+        } catch (Exception e) {
+            return new TokenValidationResult(false, "JWT token validation failed.");
+        }
+    }
 
 }

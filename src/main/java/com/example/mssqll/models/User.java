@@ -1,9 +1,9 @@
 package com.example.mssqll.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.persistence.Table;
 import lombok.*;
-import org.hibernate.annotations.Nationalized;
+import org.hibernate.annotations.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,7 +17,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@ToString
+@FilterDef(name = "activeFilter", parameters = @ParamDef(name = "role", type = String.class))
+@Filter(name = "activeFilter", condition = "role != :role")
 @Table(name = "users")
 public class User implements UserDetails {
 

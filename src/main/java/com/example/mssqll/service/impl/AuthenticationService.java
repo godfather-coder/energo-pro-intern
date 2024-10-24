@@ -2,12 +2,10 @@ package com.example.mssqll.service.impl;
 
 import com.example.mssqll.dto.response.SignResponseDto;
 import com.example.mssqll.dto.response.UserResponseDto;
-import com.example.mssqll.models.JwtAuthenticationResponse;
-import com.example.mssqll.models.SignInRequest;
-import com.example.mssqll.models.SignUpRequest;
-import com.example.mssqll.models.User;
+import com.example.mssqll.models.*;
 import com.example.mssqll.repository.UserRepository;
 import com.example.mssqll.utiles.exceptions.UserAlreadyExistsException;
+import com.example.mssqll.utiles.exceptions.UserIsDeletedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,6 +52,9 @@ public class AuthenticationService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
+        if(user.getRole() == Role.SOFT_DELETED){
+            throw new UserIsDeletedException("User is deleted");
+        }
         var jwt = jwtService.generateToken(user, false);
         UserResponseDto userDto = UserResponseDto.builder()
                 .id(user.getId())

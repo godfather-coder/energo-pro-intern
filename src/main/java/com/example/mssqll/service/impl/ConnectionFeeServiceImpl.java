@@ -9,6 +9,8 @@ import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ConnectionFeeService;
 import lombok.SneakyThrows;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -176,45 +178,45 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     @Override
     public ByteArrayInputStream createExcel(List<ConnectionFee> connectionFees) throws IOException {
-        String[] columns = {"ID", "Order Number", "Region", "Service Center", "Project ID", "Withdraw Type", "Total Amount", "Purpose", "Description", "Tax"};
+        String[] columns = {
+                "ID", //0
+                "ორდერის N",//1
+                "რეგიონი",//2
+                "სერვის ცენტრი",//3
+                "პროექტის ნომერი",//4
+                "გარკვევის თარიღი",//5
+                "შეცვლის თარიღი",//6
+                "შენიშვნა",//7
+                "გადმოტანის თარიღი",//8
+                "ჩარიცხვის თარიღი",//9
+                "თანხა",//10
+                "გადამხდელის იდენტიფიკატორი",//11
+                "მიზანი",//12
+                "აღწერა",//13
+        };
 
         XSSFWorkbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Connection Fees");
 
         Row headerRow = sheet.createRow(0);
+        XSSFFont boldFont = workbook.createFont();
+        boldFont.setBold(true);
+        XSSFCellStyle boldCellStyle = workbook.createCellStyle();
+        boldCellStyle.setFont(boldFont);
 
         for (int i = 0; i < columns.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(columns[i]);
+            cell.setCellStyle(boldCellStyle);
         }
-
-        CellStyle orangeStyle = workbook.createCellStyle();
-        orangeStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
-        orangeStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-        CellStyle redStyle = workbook.createCellStyle();
-        redStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
-        redStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
         int rowIdx = 1;
         for (ConnectionFee connectionFee : connectionFees) {
             Row row = sheet.createRow(rowIdx);
 
-            if (rowIdx == 3) {
-                for (int i = 0; i < columns.length; i++) {
-                    Cell cell = row.createCell(i);
-                    cell.setCellValue(getCellValue(connectionFee, i));
-                    cell.setCellStyle(orangeStyle);  // Apply orange style
-                }
-            } else {
-                for (int i = 0; i < columns.length; i++) {
-                    Cell cell = row.createCell(i);
-                    cell.setCellValue(getCellValue(connectionFee, i));
-
-                    if (i == 4) {
-                        cell.setCellStyle(redStyle);
-                    }
-                }
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = row.createCell(i);
+                cell.setCellValue(getCellValue(connectionFee, i));
             }
             rowIdx++;
         }
@@ -232,7 +234,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     public void divideFee(Long feeId, Double[] arr) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User userDetails = (User) authentication.getPrincipal();
-
         Optional<Double> arrSum = Arrays.stream(arr).reduce(Double::sum);
         Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(feeId);
         List<ConnectionFee> feeToAdd = new ArrayList<>();
@@ -246,6 +247,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     Double childSum = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
+                        int childNum = 1;
                         for (Double d : arr) {
                             if (d == 0.0) {
                                 continue;
@@ -255,6 +257,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeCopy.setParent(connectionFee1);
                             connectionFeeCopy.setChangePerson(userDetails);
                             connectionFeeCopy.setTransferPerson(userDetails);
+
+                            String parentQueueNumber = connectionFee1.getQueueNumber() != null
+                                    ? connectionFee1.getQueueNumber()
+                                    : String.valueOf(connectionFee1.getId());
+                            connectionFeeCopy.setQueueNumber(parentQueueNumber + "-" + childNum);
+                            childNum++;
                             feeToAdd.add(connectionFeeCopy);
                         }
                         try {
@@ -321,32 +329,33 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
 
     private String getCellValue(ConnectionFee connectionFee, int columnIndex) {
-        switch (columnIndex) {
-            case 0:
-                return String.valueOf(connectionFee.getId());
-            case 1:
-                return null;
-            case 2:
-                return connectionFee.getOrderN();
-            case 3:
-                return connectionFee.getRegion();
-            case 4:
-                return connectionFee.getServiceCenter();
-            case 5:
-                return connectionFee.getProjectID();
-            case 6:
-                return connectionFee.getWithdrawType();
-            case 7:
-                return String.valueOf(connectionFee.getTotalAmount());
-            case 8:
-                return connectionFee.getPurpose();
-            case 9:
-                return connectionFee.getDescription();
-            case 10:
-                return connectionFee.getTax();
-            default:
-                return "";
-        }
+        return switch (columnIndex) {
+            case 0 -> String.valueOf(connectionFee.getId());
+            case 1 -> connectionFee.getOrderN();
+            case 2 -> connectionFee.getRegion();
+            case 3 -> connectionFee.getServiceCenter();
+            case 4 -> connectionFee.getProjectID();
+            case 5 -> {
+                if (connectionFee.getClarificationDate() != null) {
+                    yield connectionFee.getClarificationDate().toString();
+                }
+                yield "";
+            }
+            case 6 -> {
+                if (connectionFee.getChangeDate() != null) {
+                    yield connectionFee.getChangeDate().toString();
+                }
+                yield "";
+            }
+            case 7 -> connectionFee.getNote();
+            case 8 -> connectionFee.getTransferDate().toString();
+            case 9 -> connectionFee.getExtractionDate().toString();
+            case 10 -> connectionFee.getTotalAmount().toString();
+            case 11 -> connectionFee.getTax();
+            case 12 -> connectionFee.getPurpose();
+            case 13 -> connectionFee.getDescription();
+            default -> "";
+        };
     }
 
 }

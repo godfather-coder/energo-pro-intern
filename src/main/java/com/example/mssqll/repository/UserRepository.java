@@ -12,6 +12,4 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User> findByEmail(String email);
     Optional<User> findById(Long id);
-    @Query("select e from User e where e.role!='ROLE_ADMIN'")
-    List<User> findByIsAdminFalse();
 }

@@ -1,14 +1,16 @@
 package com.example.mssqll.service.impl;
 
 import com.example.mssqll.dto.response.UserResponseDto;
-import com.example.mssqll.models.SignUpRequest;
+import com.example.mssqll.models.Role;
 import com.example.mssqll.models.User;
 import com.example.mssqll.repository.UserRepository;
 import com.example.mssqll.service.UserService;
-import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
-import com.example.mssqll.utiles.exceptions.UserNotFoundException;
-import lombok.RequiredArgsConstructor;
+import com.example.mssqll.utiles.exceptions.AdminNotEditException;
+import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ import java.util.Optional;
 @Service
 public class UserServiceImpl implements UserService {
 
+    @Autowired
+    private EntityManager entityManager;
     @Autowired
     private final UserRepository userRepository;
     @Autowired
@@ -35,20 +39,24 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDto updateUser(User user, Long id) {
         Optional<User> user12 = userRepository.findById(id);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
         if (user12.isEmpty()) {
             throw new UsernameNotFoundException("User not found");
         } else {
             User user1 = user12.get();
+            if (userDetails.getRole() == user1.getRole() && !user1.getId().equals(userDetails.getId())) {
+                throw new AdminNotEditException("You cannot update an admin");
+            }
             user1.setFirstName(user.getFirstName());
             user1.setLastName(user.getLastName());
-            if(user.getPassword() !=(null)){
+            if (user.getPassword() != (null)) {
                 user1.setPassword(passwordEncoder.encode(user.getPassword()));
             }
             user1.setEmail(user.getEmail());
             user1.setRole(user.getRole());
             user1.setUpdatedAt(LocalDateTime.now());
             userRepository.save(user1);
-
             return UserResponseDto.builder()
                     .email(user1.getEmail())
                     .firstName(user1.getFirstName())
@@ -62,20 +70,36 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String deleteUser(Long id) {
+    public UserResponseDto deleteUser(Long id) {
+
         Optional<User> user = userRepository.findById(id);
+        User user1 ;
         if (user.isEmpty()) {
-            return "User not found";
+            throw new UsernameNotFoundException("User not found");
         }
-        userRepository.deleteById(id);
-        return "User deleted";
+        user1 = user.get();
+        user1.setRole(Role.SOFT_DELETED);
+        user1 = userRepository.save(user1);
+        return UserResponseDto.builder()
+                    .email(user1.getEmail())
+                    .firstName(user1.getFirstName())
+                    .lastName(user1.getLastName())
+                    .updatedAt(user1.getUpdatedAt())
+                    .role(user1.getRole())
+                    .createdAt(user1.getCreatedAt())
+                    .id(user1.getId())
+                    .build();
     }
 
     @Override
     public List<UserResponseDto> getAllUsers() {
-        List<User> users = userRepository.findByIsAdminFalse();
+
+        Session session = entityManager.unwrap(Session.class);
+        session.enableFilter("activeFilter").setParameter("role", "SOFT_DELETED");
+        List<User> users = session.createQuery("FROM User", User.class).getResultList();
+
         List<UserResponseDto> userResponseDtos = new ArrayList<>();
-        for(User e : users){
+        for (User e : users) {
             userResponseDtos.add(
                     UserResponseDto.builder()
                             .email(e.getEmail())

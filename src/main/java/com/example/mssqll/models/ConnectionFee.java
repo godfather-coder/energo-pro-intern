@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
 import org.hibernate.annotations.Where;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +40,9 @@ public class ConnectionFee {
     @Column(name = "sevice_center")
     @Nationalized
     private String serviceCenter;
+
+    @Column(name = "queueNumber")
+    private String queueNumber;
 
     @Column(name = "project_id")
     @Nationalized
