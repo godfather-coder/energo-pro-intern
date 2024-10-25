@@ -7,8 +7,12 @@ import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
 import com.example.mssqll.repository.ExtractionTaskRepository;
 import com.example.mssqll.service.ConnectionFeeService;
+import com.example.mssqll.utiles.exceptions.FileAlreadyTransferredException;
+import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import lombok.SneakyThrows;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -20,7 +24,6 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -64,39 +67,47 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     public List<ConnectionFee> saveFee(Long extractionTask) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User userDetails = (User) authentication.getPrincipal();
+
         Optional<ExtractionTask> extractionTaskOptional = extractionTaskRepository.findById(extractionTask);
-        if (extractionTaskOptional.isPresent()) {
-            ExtractionTask extractionTask1 = extractionTaskOptional.get();
-            List<Extraction> extractions = extractionRepository.findByExtractionTask(extractionTask1);
-            if (extractionTask1.getStatus().equals(FileStatus.WARNING)) {
-                extractionTask1.setStatus(FileStatus.TRANSFERRED_WARNING);
-            } else {
-                extractionTask1.setStatus(FileStatus.TRANSFERRED_GOOD);
-            }
-            extractionTask1.setSendDate(LocalDateTime.now());
-            extractionTaskRepository.save(extractionTask1);
-            List<ConnectionFee> fees = new ArrayList<>();
-            for (Extraction extraction : extractions) {
-                fees.add(
-                        ConnectionFee.builder()
-                                .purpose(extraction.getPurpose())
-                                .totalAmount(extraction.getTotalAmount())
-                                .extractionDate(extraction.getDate())
-                                .status(Status.TRANSFERRED)
-                                .transferDate(LocalDateTime.now())
-                                .extractionTask(extraction.getExtractionTask())
-                                .description(extraction.getDescription())
-                                .extractionId(extraction.getId())
-                                .tax(extraction.getTax())
-                                .transferPerson(userDetails)
-                                .changePerson(userDetails)
-                                .build()
-                );
-            }
-            return connectionFeeRepository.saveAll(fees);
-        } else {
+        if (!extractionTaskOptional.isPresent()) {
             throw new ResourceNotFoundException("Extraction task not found");
         }
+
+        ExtractionTask extractionTask1 = extractionTaskOptional.get();
+        if (extractionTask1.getStatus() == FileStatus.TRANSFERRED_GOOD ||
+                extractionTask1.getStatus() == FileStatus.TRANSFERRED_WARNING) {
+            throw new FileAlreadyTransferredException("file with id: " + extractionTask1.getId() + " already transferred");
+        }
+
+        List<Extraction> extractions = extractionRepository.findByExtractionTask(extractionTask1);
+        if (extractionTask1.getStatus().equals(FileStatus.WARNING)) {
+            extractionTask1.setStatus(FileStatus.TRANSFERRED_WARNING);
+        } else {
+            extractionTask1.setStatus(FileStatus.TRANSFERRED_GOOD);
+        }
+        extractionTask1.setSendDate(LocalDateTime.now());
+        extractionTaskRepository.save(extractionTask1);
+
+        List<ConnectionFee> fees = new ArrayList<>();
+        for (Extraction extraction : extractions) {
+            fees.add(
+                    ConnectionFee.builder()
+                            .orderStatus(OrderStatus.ORDER_INCOMPLETE)
+                            .purpose(extraction.getPurpose())
+                            .totalAmount(extraction.getTotalAmount())
+                            .extractionDate(extraction.getDate())
+                            .status(Status.TRANSFERRED)
+                            .transferDate(LocalDateTime.now())
+                            .extractionTask(extraction.getExtractionTask())
+                            .description(extraction.getDescription())
+                            .extractionId(extraction.getId())
+                            .tax(extraction.getTax())
+                            .transferPerson(userDetails)
+                            .changePerson(userDetails)
+                            .build()
+            );
+        }
+        return connectionFeeRepository.saveAll(fees);
     }
 
     @Override
@@ -144,6 +155,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             existingFee.setClarificationDate(LocalDateTime.now());
         } else {
             existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
+        }
+        if (!Objects.equals(existingFee.getOrderN(), "") &&
+                existingFee.getOrderN() != null && !existingFee.getOrderN().trim().isEmpty()) {
+            existingFee.setOrderStatus(OrderStatus.ORDER_COMPLETE);
+        } else {
+            existingFee.setOrderStatus(OrderStatus.ORDER_INCOMPLETE);
         }
         return connectionFeeRepository.save(existingFee);
     }
@@ -248,7 +265,11 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
                         int childNum = 1;
-                        for (Double d : arr) {
+                        Double newElement = connectionFee1.getTotalAmount() - childSum - sum;
+
+                        Double[] newArr = Arrays.copyOf(arr, arr.length + 1);
+                        newArr[newArr.length - 1] = newElement;
+                        for (Double d : newArr) {
                             if (d == 0.0) {
                                 continue;
                             }

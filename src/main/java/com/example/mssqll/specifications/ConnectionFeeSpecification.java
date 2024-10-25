@@ -2,10 +2,10 @@ package com.example.mssqll.specifications;
 
 import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.ExtractionTask;
-import com.example.mssqll.models.Status;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -100,11 +100,11 @@ public class ConnectionFeeSpecification {
                             break;
                         case "totalAmountStart":
                             Double totalAmountStart = Double.parseDouble(value.toString());
-                            predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("totalAmount"),totalAmountStart));
+                            predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("totalAmount"), totalAmountStart));
                             break;
                         case "totalAmountEnd":
                             Double totalAmountEnd = Double.parseDouble(value.toString());
-                            predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("totalAmount"),totalAmountEnd));
+                            predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("totalAmount"), totalAmountEnd));
                             break;
                         case "purpose":
                             predicates.add(criteriaBuilder.like(root.get("purpose"), "%" + value + "%"));
@@ -114,6 +114,7 @@ public class ConnectionFeeSpecification {
                             break;
                         case "tax":
                             predicates.add(criteriaBuilder.like(root.get("tax"), "%" + value + "%"));
+                            break;
                         case "file":
                             Join<ConnectionFee, ExtractionTask> extractionTaskJoin = root.join("extractionTask");
                             predicates.add(criteriaBuilder.like(extractionTaskJoin.get("fileName"), "%" + value + "%"));

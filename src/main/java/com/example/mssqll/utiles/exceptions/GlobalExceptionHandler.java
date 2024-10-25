@@ -1,7 +1,5 @@
 package com.example.mssqll.utiles.exceptions;
 
-
-import com.example.mssqll.dto.response.TokenValidationResult;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.http.HttpStatus;
@@ -11,7 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ResponseStatus;
-
 import java.sql.SQLException;
 
 @ControllerAdvice
@@ -34,7 +31,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(ex.getMessage()));
     }
-
+    @ExceptionHandler(FileAlreadyTransferredException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ResponseEntity<?> handleFileAlreadyTransferredException(FileAlreadyTransferredException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResponseEntity<?> handleAccessDeniedException(AccessDeniedException ex) {
@@ -60,7 +62,6 @@ public class GlobalExceptionHandler {
     @Getter
     public static class ErrorResponse {
         private String message;
-
         public ErrorResponse(String message) {
             this.message = message;
         }

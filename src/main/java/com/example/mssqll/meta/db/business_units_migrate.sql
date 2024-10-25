@@ -1,10 +1,10 @@
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (68,1000, N'სათაო ოფისი', 301, Null);
-INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (7,1300, N'აღმოსავლეთ რეგიონი', 61, 68);
+-- INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (7,1300, N'აღმოსავლეთ რეგიონი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (14,200, N'დასავლეთ რეგიონი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (15,300, N'დასავლეთ-ცენტრალური რეგიონი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (16,400, N'სამხრეთ რეგიონი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (17,1200, N'სხვა', 61, 68);
-INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (72,500, N'ფოთის თავისუფალი ეკონომიური ზონა', 61, 68);
+-- INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (72,500, N'ფოთის თავისუფალი ეკონომიური ზონა', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (76,700, N'კახეთის რეგიონი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (91,800, N'ქვემო-ქართლი', 61, 68);
 INSERT INTO business_units (ID,UNIT_NUMBER, NAME, UNIT_TYPE_KEY, PARENT_ID) VALUES (92,900, N'მცხეთა-მთიანეთი', 61, 68);

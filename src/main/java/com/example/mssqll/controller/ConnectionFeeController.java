@@ -119,7 +119,8 @@ public class ConnectionFeeController {
     }
 
     @GetMapping("/download")
-    public ResponseEntity<byte[]> downloadExcel(@RequestParam String accessToken) throws IOException {
+    public ResponseEntity<byte[]> downloadExcel(
+            @RequestParam String accessToken) throws IOException {
 
         TokenValidationResult res = jwtService.validateTokenWithoutUserName(accessToken);
         if (!res.isValid()) {

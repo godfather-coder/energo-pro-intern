@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
 import org.hibernate.annotations.Where;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +25,7 @@ public class ConnectionFee {
     @Column(name = "id")
     private Long id;
 
+    private OrderStatus orderStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")

@@ -71,24 +71,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDto deleteUser(Long id) {
-
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
         Optional<User> user = userRepository.findById(id);
-        User user1 ;
+        User user1;
         if (user.isEmpty()) {
             throw new UsernameNotFoundException("User not found");
         }
+
         user1 = user.get();
+        if (user1.getRole() == Role.ROLE_ADMIN) {
+            throw new AdminNotEditException("You can't edit admin from Role " + user1.getRole() +
+                    " to role " + Role.SOFT_DELETED);
+        }
         user1.setRole(Role.SOFT_DELETED);
         user1 = userRepository.save(user1);
         return UserResponseDto.builder()
-                    .email(user1.getEmail())
-                    .firstName(user1.getFirstName())
-                    .lastName(user1.getLastName())
-                    .updatedAt(user1.getUpdatedAt())
-                    .role(user1.getRole())
-                    .createdAt(user1.getCreatedAt())
-                    .id(user1.getId())
-                    .build();
+                .email(user1.getEmail())
+                .firstName(user1.getFirstName())
+                .lastName(user1.getLastName())
+                .updatedAt(user1.getUpdatedAt())
+                .role(user1.getRole())
+                .createdAt(user1.getCreatedAt())
+                .id(user1.getId())
+                .build();
     }
 
     @Override
