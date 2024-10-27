@@ -83,7 +83,6 @@ public class ConnectionFeeController {
     public ResponseEntity<ConnectionFee> updateConnectionFee(
             @PathVariable Long connectionFeeId,
             @RequestBody ConnectionFee connectionFeeDetails) {
-
         ConnectionFee updatedConnectionFee = connectionFeeService.updateFee(connectionFeeId, connectionFeeDetails);
         return ResponseEntity.ok().body(updatedConnectionFee);
     }
