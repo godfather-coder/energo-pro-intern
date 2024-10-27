@@ -263,7 +263,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
                         int childNum = 1;
-                        Double newElement = connectionFee1.getTotalAmount() - childSum - sum;
+                        double newElement = connectionFee1.getTotalAmount() - childSum - sum;
 
                         Double[] newArr = Arrays.copyOf(arr, arr.length + 1);
                         newArr[newArr.length - 1] = newElement;
