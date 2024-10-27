@@ -6,17 +6,18 @@ import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.service.ConnectionFeeService;
 import com.example.mssqll.service.impl.JwtService;
 import com.example.mssqll.specifications.ConnectionFeeSpecification;
+import com.example.mssqll.utiles.exceptions.DivideException;
 import com.example.mssqll.utiles.exceptions.TokenValidationException;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -132,10 +133,10 @@ public class ConnectionFeeController {
 
         HttpHeaders headers = new HttpHeaders();
         String time = LocalDateTime.now(ZoneId.of("Asia/Tbilisi"))
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         headers.add("Content-Disposition",
                 "attachment; filename=" +
-                        time+
+                        time +
                         " connection_fees.xlsx");
         return ResponseEntity.ok()
                 .headers(headers)
@@ -145,16 +146,12 @@ public class ConnectionFeeController {
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER','OPERATOR')")
     @PostMapping("/divide-fee/{id}")
-    public ResponseEntity<String> divideFee(@PathVariable Long id, @RequestBody Double[] arr) {
+    public ResponseEntity<?> divideFee(@PathVariable Long id, @RequestBody Double[] arr) {
         try {
             connectionFeeService.divideFee(id, arr);
-            return ResponseEntity.ok().body(
-                    "Divide Successfully"
-            );
+            return ResponseEntity.ok().body("Divide Successfully");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    e.getMessage()
-            );
+            throw new DivideException(e.getMessage());
         }
     }
 

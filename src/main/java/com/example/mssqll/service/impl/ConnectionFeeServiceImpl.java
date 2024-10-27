@@ -24,7 +24,6 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -69,7 +68,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         User userDetails = (User) authentication.getPrincipal();
 
         Optional<ExtractionTask> extractionTaskOptional = extractionTaskRepository.findById(extractionTask);
-        if (!extractionTaskOptional.isPresent()) {
+        if (extractionTaskOptional.isEmpty()) {
             throw new ResourceNotFoundException("Extraction task not found");
         }
 
@@ -179,7 +178,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         if (extractionTask.isPresent()) {
             ExtractionTask extractionTask1 = extractionTask.get();
             extractionTask1.setStatus(FileStatus.SOFT_DELETED);
-            ExtractionTask task = extractionTaskRepository.save(extractionTask1);
             connectionFeeRepository.updateStatusByExtractionTask(Status.SOFT_DELETED, extractionTask1);
 
         }
@@ -286,13 +284,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             childNum++;
                             feeToAdd.add(connectionFeeCopy);
                         }
-                        try {
-                            connectionFee1.setStatus(Status.CANCELD);
-                            connectionFeeRepository.save(connectionFee1);
-                            connectionFeeRepository.saveAll(feeToAdd);
-                        } catch (Exception e) {
-                            throw e;
-                        }
+                        connectionFee1.setStatus(Status.CANCELD);
+                        connectionFeeRepository.save(connectionFee1);
+                        connectionFeeRepository.saveAll(feeToAdd);
                     } else {
                         throw new Exception("Sum of element must not be grater than parent amount");
                     }

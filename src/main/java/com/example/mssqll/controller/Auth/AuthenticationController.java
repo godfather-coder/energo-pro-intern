@@ -10,7 +10,6 @@ import com.example.mssqll.models.User;
 import com.example.mssqll.service.impl.AuthenticationService;
 import com.example.mssqll.utiles.exceptions.UserAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
-import org.openxmlformats.schemas.spreadsheetml.x2006.main.STIconSetType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -44,21 +43,22 @@ public class AuthenticationController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> signIn(@RequestBody SignInRequest request) {
-        HashMap<String,String> response = new HashMap<>();
+        HashMap<String, String> response = new HashMap<>();
         try {
             SignResponseDto res = authenticationService.signin(request);
             return ResponseEntity.ok(res);
         } catch (BadCredentialsException e) {
             response.put("error", "მონაცემები არასწორია.");
+            response.put("Exception", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(response);
         } catch (Exception e) {
-             response.put("error", "მონაცემები არასწორია.");
+            response.put("error", "INTERNAL_SERVER_ERROR");
+            response.put("Exception", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(response);
         }
     }
-
 
 
     @GetMapping("/user")
