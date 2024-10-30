@@ -44,10 +44,10 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails, Boolean logout) {
-        return generateToken(new HashMap<>(), userDetails, logout,jwtExpirationMs);
+        return generateToken(new HashMap<>(), userDetails, logout, jwtExpirationMs);
     }
 
-      public String generateRefreshToken(UserDetails userDetails) {
+    public String generateRefreshToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails, false, refreshExpirationMs);
     }
 
@@ -64,7 +64,7 @@ public class JwtService {
         }
     }
 
-    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, Boolean logout,Long expirationMs) {
+    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, Boolean logout, Long expirationMs) {
         try {
             List<String> roles = new ArrayList<>();
             for (GrantedAuthority authority : userDetails.getAuthorities()) {
@@ -189,9 +189,9 @@ public class JwtService {
         try {
             String username = extractUserName(refreshToken);
             boolean res = (username.equals(userName)) && !isTokenExpired(refreshToken);
-            return new TokenValidationResult(res,"Refresh Token is valid");
+            return new TokenValidationResult(res, "Refresh Token is valid");
         } catch (Exception e) {
-            return new TokenValidationResult(false, "JWT token validation failed."+e.getMessage());
+            return new TokenValidationResult(false, "JWT token validation failed." + e.getMessage());
         }
     }
 
@@ -199,7 +199,7 @@ public class JwtService {
         Claims claims = extractAllClaims(refreshToken);
         String username = claims.getSubject();
 
-        if (isTokenExpired(refreshToken) || tokenBlacklistService.isTokenBlacklisted(refreshToken) || !validateRefreshToken(refreshToken,username).isValid()) {
+        if (isTokenExpired(refreshToken) || tokenBlacklistService.isTokenBlacklisted(refreshToken) || !validateRefreshToken(refreshToken, username).isValid()) {
             throw new JwtException("Refresh token is invalid or expired.");
         }
 

@@ -2,7 +2,6 @@ package com.example.mssqll.service;
 
 import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
 import com.example.mssqll.models.ConnectionFee;
-import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 
@@ -19,7 +18,6 @@ public interface ConnectionFeeService {
    List<ConnectionFee> saveFee(Long extractionTask);
    ConnectionFee save(ConnectionFee connectionFee);
    Optional<ConnectionFee> findById(Long id);
-   void deleteById(Long id);
    ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails);
    PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir);
    void deleteByTaskId(Long taskId);

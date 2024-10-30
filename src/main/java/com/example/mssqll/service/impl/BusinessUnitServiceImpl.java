@@ -50,13 +50,19 @@ public class BusinessUnitServiceImpl implements BusinessUnitService {
 
     @Override
     public List<BusinessUnit> getBusinessUnitsByParent(BusinessUnit parent) {
-                return businessUnitRepository.findByParent(parent);
+        return businessUnitRepository.findByParent(parent);
     }
 
     @Override
     public List<BusinessUnit> getRootBusinessUnits() {
         return businessUnitRepository.findByParentIsNull();
     }
+
+    @Override
+    public List<?> getBykey(Integer key) {
+        return businessUnitRepository.findByUnitTypeKey(key);
+    }
+
     public List<BusinessUnitResponseDto> convertToDtoList(List<BusinessUnit> businessUnits) {
         return businessUnits.stream()
                 .map(this::convertToDto)

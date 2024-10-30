@@ -53,7 +53,7 @@ public class ExcelServiceImpl implements ExcelService {
                 Sheet sheet = workbook.getSheetAt(i);
                 boolean fileStatus = true;
                 for (Row row : sheet) {
-                    if (row.getRowNum() < 2) {
+                    if (row.getRowNum() < 1) {
                         continue;
                     }
 
@@ -197,11 +197,6 @@ public class ExcelServiceImpl implements ExcelService {
     }
 
     @Override
-    public PagedModel<Extraction> getAllWarningExtractionsWithFile(int page, int size, Long fileid) {
-        return null;
-    }
-
-    @Override
     public PagedModel<Extraction> getAllOkExtractionsWithFile(int page, int size, Long fileid) {
         return new PagedModel<>(extractionRepository.findByExtractionTaskIdAndStatus(fileid, Status.GOOD, PageRequest.of(page, size)));
     }
@@ -273,98 +268,60 @@ public class ExcelServiceImpl implements ExcelService {
         extractionTaskRepository.deleteById(id);
     }
 
-    @Override
-    public PagedModel<Extraction> getByDate(LocalDate from, LocalDate to, int page, int size) {
-        return new PagedModel<>(extractionRepository.findAllByDateBetween(from, to, PageRequest.of(page, size)));
-    }
+
 
     @Override
-    public Long getWarnCountByDate(LocalDate from, LocalDate to) {
-        return extractionRepository.countWarningsByDate(from, to);
+    public Map<String, Object> letsDoExtractionFilter(Specification<Extraction> spec, int page, int size, String sortBy, String sortDir) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+
+        PagedModel<Extraction> excPage = new PagedModel<>(extractionRepository.findAll(spec, PageRequest.of(page, size, sort)));
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<Double> sumQuery = cb.createQuery(Double.class);
+        Root<Extraction> sumRoot = sumQuery.from(Extraction.class);
+        sumQuery.select(cb.sum(sumRoot.get("totalAmount")));
+
+        Predicate sumPredicate = spec.toPredicate(sumRoot, sumQuery, cb);
+        if (sumPredicate != null) {
+            sumQuery.where(sumPredicate);
+        }
+        Double totalAmountSum = entityManager.createQuery(sumQuery).getSingleResult();
+
+        CriteriaQuery<Long> countGoodQuery = cb.createQuery(Long.class);
+        Root<Extraction> goodRoot = countGoodQuery.from(Extraction.class);
+        countGoodQuery.select(cb.count(goodRoot));
+
+        Predicate goodPredicate = spec.toPredicate(goodRoot, countGoodQuery, cb);
+        Predicate goodStatusPredicate = cb.equal(goodRoot.get("status"), Status.GOOD);
+        if (goodPredicate != null) {
+            countGoodQuery.where(cb.and(goodPredicate, goodStatusPredicate));
+        } else {
+            countGoodQuery.where(goodStatusPredicate);
+        }
+        Long goodCount = entityManager.createQuery(countGoodQuery).getSingleResult();
+
+        CriteriaQuery<Long> countWarnQuery = cb.createQuery(Long.class);
+        Root<Extraction> warnRoot = countWarnQuery.from(Extraction.class);
+        countWarnQuery.select(cb.count(warnRoot));
+
+        Predicate warnPredicate = spec.toPredicate(warnRoot, countWarnQuery, cb);
+        Predicate warnStatusPredicate = cb.equal(warnRoot.get("status"), Status.WARNING);
+        if (warnPredicate != null) {
+            countWarnQuery.where(cb.and(warnPredicate, warnStatusPredicate));
+        } else {
+            countWarnQuery.where(warnStatusPredicate);
+        }
+        Long warnCount = entityManager.createQuery(countWarnQuery).getSingleResult();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalAmountSum", totalAmountSum);
+        response.put("excPage", excPage);
+        response.put("ok", goodCount);
+        response.put("warn", warnCount);
+
+        return response;
     }
-
-    @Override
-    public Long getOkCountByDate(LocalDate from, LocalDate to) {
-        return extractionRepository.countOksByDate(from, to);
-    }
-
-    @Override
-    public Long sumByDate(LocalDate from, LocalDate to) {
-        return extractionRepository.sumByDate(from, to);
-    }
-
-    @Override
-    public PagedModel<Extraction> getByTotalAmount(Long totalAmount, int page, int size) {
-        return new PagedModel<>(extractionRepository.findByTotalAmount(totalAmount, PageRequest.of(page, size)));
-    }
-
-    @Override
-    public Long countByTotalAmountAndStatus(Long totalAmount, Status status) {
-        return extractionRepository.countByTotalAmountAndStatus(totalAmount, status);
-    }
-
-    @Override
-    public Long sumByTotalAmount(Long totalAmount) {
-        return extractionRepository.sumByTotalAmount(totalAmount);
-    }
-
-    @Override
-    public PagedModel<Extraction> getByAmountAndStatus(Long total, int page, int size, Status status) {
-        return new PagedModel<>(extractionRepository.findByTotalAmountAndStatus(total, PageRequest.of(page, size), status));
-    }
-
-    @Override
-public Map<String, Object> letsDoExtractionFilter(Specification<Extraction> spec, int page, int size, String sortBy, String sortDir) {
-    Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-
-    PagedModel<Extraction> excPage = new PagedModel<>(extractionRepository.findAll(spec, PageRequest.of(page, size, sort)));
-
-    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-
-    CriteriaQuery<Double> sumQuery = cb.createQuery(Double.class);
-    Root<Extraction> sumRoot = sumQuery.from(Extraction.class);
-    sumQuery.select(cb.sum(sumRoot.get("totalAmount")));
-
-    Predicate sumPredicate = spec.toPredicate(sumRoot, sumQuery, cb);
-    if (sumPredicate != null) {
-        sumQuery.where(sumPredicate);
-    }
-    Double totalAmountSum = entityManager.createQuery(sumQuery).getSingleResult();
-
-    CriteriaQuery<Long> countGoodQuery = cb.createQuery(Long.class);
-    Root<Extraction> goodRoot = countGoodQuery.from(Extraction.class);
-    countGoodQuery.select(cb.count(goodRoot));
-
-    Predicate goodPredicate = spec.toPredicate(goodRoot, countGoodQuery, cb);
-    Predicate goodStatusPredicate = cb.equal(goodRoot.get("status"), Status.GOOD);
-    if (goodPredicate != null) {
-        countGoodQuery.where(cb.and(goodPredicate, goodStatusPredicate));
-    } else {
-        countGoodQuery.where(goodStatusPredicate);
-    }
-    Long goodCount = entityManager.createQuery(countGoodQuery).getSingleResult();
-
-    CriteriaQuery<Long> countWarnQuery = cb.createQuery(Long.class);
-    Root<Extraction> warnRoot = countWarnQuery.from(Extraction.class);
-    countWarnQuery.select(cb.count(warnRoot));
-
-    Predicate warnPredicate = spec.toPredicate(warnRoot, countWarnQuery, cb);
-    Predicate warnStatusPredicate = cb.equal(warnRoot.get("status"), Status.WARNING);
-    if (warnPredicate != null) {
-        countWarnQuery.where(cb.and(warnPredicate, warnStatusPredicate));
-    } else {
-        countWarnQuery.where(warnStatusPredicate);
-    }
-    Long warnCount = entityManager.createQuery(countWarnQuery).getSingleResult();
-
-    Map<String, Object> response = new HashMap<>();
-    response.put("totalAmountSum", totalAmountSum);
-    response.put("excPage", excPage);
-    response.put("ok", goodCount);
-    response.put("warn", warnCount);
-
-    return response;
-}
 
     @Override
     public ExtractionRepository getRepo() {

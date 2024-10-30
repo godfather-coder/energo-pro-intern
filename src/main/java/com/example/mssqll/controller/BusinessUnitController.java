@@ -6,6 +6,7 @@ import com.example.mssqll.models.BusinessUnit;
 import com.example.mssqll.service.BusinessUnitService;
 import com.example.mssqll.utiles.resonse.ApiResponseUnit;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
@@ -87,4 +88,9 @@ public class BusinessUnitController {
                 .data(rootUnits)
                 .build();
     }
+    @GetMapping("/unit-key/{unit_type_key}")
+    public ResponseEntity<?> getByKey(@PathVariable Integer unit_type_key) {
+        return ResponseEntity.ok().body(businessUnitService.getBykey(unit_type_key));
+    }
+
 }

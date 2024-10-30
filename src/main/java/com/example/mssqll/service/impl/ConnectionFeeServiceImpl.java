@@ -120,10 +120,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return connectionFeeRepository.findById(id);
     }
 
-    @Override
-    public void deleteById(Long id) {
-        connectionFeeRepository.deleteById(id);
-    }
 
     @Override
     public ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails) {

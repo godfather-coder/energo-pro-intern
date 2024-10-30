@@ -121,12 +121,10 @@ public class ConnectionFeeController {
     @GetMapping("/download")
     public ResponseEntity<byte[]> downloadExcel(
             @RequestParam String accessToken) throws IOException {
-
         TokenValidationResult res = jwtService.validateTokenWithoutUserName(accessToken);
         if (!res.isValid()) {
             throw new TokenValidationException(res.getMessage());
         }
-
         List<ConnectionFee> connectionFees = connectionFeeService.getAllConnectionFees();
         ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFees);
 
