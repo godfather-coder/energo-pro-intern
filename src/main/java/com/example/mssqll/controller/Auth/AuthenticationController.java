@@ -80,4 +80,14 @@ public class AuthenticationController {
     public ResponseEntity<?> logoutUser(@RequestHeader(name = "Authorization") String authorization) {
         return authenticationService.logout(authorization);
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshAccessToken(@RequestHeader(name="AuthRefresh") String refreshToken) {
+        try {
+            String newAccessToken = authenticationService.refreshAccessToken(refreshToken);
+            return ResponseEntity.ok(new JwtAuthenticationResponse(newAccessToken, refreshToken));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token.");
+        }
+    }
 }

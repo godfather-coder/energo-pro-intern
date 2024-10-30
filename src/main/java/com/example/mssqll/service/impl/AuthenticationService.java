@@ -27,9 +27,9 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public JwtAuthenticationResponse signup(SignUpRequest request) throws UserAlreadyExistsException {
+    public JwtAuthenticationResponse signup(SignUpRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new UserAlreadyExistsException();
+            throw new UserAlreadyExistsException("User already exists");
         }
         var user = User.builder()
                 .firstName(request.getFirstName())
@@ -42,6 +42,7 @@ public class AuthenticationService {
         user = userService.save(user);
         var jwt = jwtService.generateToken(user, false);
         return JwtAuthenticationResponse.builder()
+                .refreshToken(jwtService.generateRefreshToken(user))
                 .token(jwt)
                 .build();
     }
@@ -66,7 +67,7 @@ public class AuthenticationService {
                 .updatedAt(user.getUpdatedAt())
                 .build();
         return SignResponseDto.builder().
-                jwtAuthenticationResponse(JwtAuthenticationResponse.builder().token(jwt).build())
+                jwtAuthenticationResponse(JwtAuthenticationResponse.builder().token(jwt).refreshToken(jwtService.generateRefreshToken(user)).build())
                 .user(userDto)
                 .build();
     }
@@ -83,5 +84,8 @@ public class AuthenticationService {
         errorResponse.put("error", "Invalid authorization.");
 
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+    public String refreshAccessToken(String refreshToken){
+        return jwtService.refreshAccessToken(refreshToken);
     }
 }
