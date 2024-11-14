@@ -24,6 +24,7 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -128,7 +129,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User userDetails = (User) authentication.getPrincipal();
         existingFee.setStatus(connectionFeeDetails.getStatus());
-        existingFee.setOrderN(connectionFeeDetails.getOrderN());
         existingFee.setRegion(connectionFeeDetails.getRegion());
         existingFee.setServiceCenter(connectionFeeDetails.getServiceCenter());
         existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
@@ -145,6 +145,14 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setTotalAmount(connectionFeeDetails.getTotalAmount());
         existingFee.setPurpose(connectionFeeDetails.getPurpose());
         existingFee.setDescription(connectionFeeDetails.getDescription());
+        existingFee.setPaymentOrderSentDate(connectionFeeDetails.getPaymentOrderSentDate());//new
+        existingFee.setTreasuryRefundDate(connectionFeeDetails.getTreasuryRefundDate());//new
+        if (!Objects.equals(existingFee.getOrderN(), connectionFeeDetails.getOrderN())) {
+            List<String> newLst =  existingFee.getCanceledOrders();
+            newLst.add(existingFee.getOrderN());
+            existingFee.setCanceledOrders(newLst);//new
+            existingFee.setOrderN(connectionFeeDetails.getOrderN());
+        }
         existingFee.setStatus(Status.TRANSFER_COMPLETE);
         if (connectionFeeDetails.getClarificationDate() == null) {
             existingFee.setClarificationDate(LocalDateTime.now());
@@ -239,7 +247,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-
     @SneakyThrows
     @Override
     public void divideFee(Long feeId, Double[] arr) {
@@ -260,7 +267,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
                         int childNum = 1;
                         double newElement = connectionFee1.getTotalAmount() - childSum - sum;
-
                         Double[] newArr = Arrays.copyOf(arr, arr.length + 1);
                         newArr[newArr.length - 1] = newElement;
                         for (Double d : newArr) {
@@ -272,30 +278,45 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeCopy.setParent(connectionFee1);
                             connectionFeeCopy.setChangePerson(userDetails);
                             connectionFeeCopy.setTransferPerson(userDetails);
+                            connectionFeeCopy.setOrderStatus(OrderStatus.ORDER_INCOMPLETE);
 
                             String parentQueueNumber = connectionFee1.getQueueNumber() != null
                                     ? connectionFee1.getQueueNumber()
                                     : String.valueOf(connectionFee1.getId());
-                            connectionFeeCopy.setQueueNumber(parentQueueNumber + "-" + childNum);
+                            connectionFeeCopy.setQueueNumber(parentQueueNumber + "-" + (connectionFeeRepository.childNumberByParentId(feeId) + childNum));
                             childNum++;
                             feeToAdd.add(connectionFeeCopy);
                         }
-                        connectionFee1.setStatus(Status.CANCELD);
+                        boolean isLastElement = feeToAdd.get(feeToAdd.size() - 1).getTotalAmount() == newElement;
+                        boolean isFullSumMatch = (sum + childSum == connectionFee1.getTotalAmount());
+
+                        if (!isFullSumMatch && isLastElement) {
+                            ConnectionFee lastFee = feeToAdd.get(feeToAdd.size() - 1);
+                            lastFee.setNote("ნაშთი");
+                            lastFee.setOrderN("ნაშთი");
+                            lastFee.setDescription("ნაშთი");
+                            lastFee.setPurpose("ნაშთი");
+                            lastFee.setStatus(Status.REMINDER);
+                        } else if (isFullSumMatch) {
+                            connectionFeeRepository.deleteResidualEntriesByParentId(connectionFee1.getId());
+                        }
+                        connectionFee1.setStatus(Status.CANCELED);
                         connectionFeeRepository.save(connectionFee1);
                         connectionFeeRepository.saveAll(feeToAdd);
                     } else {
-                        throw new Exception("Sum of element must not be grater than parent amount");
+                        throw new Exception("Sum of elements must not be greater than parent amount");
                     }
                 } else {
-                    throw new Exception("Sum of array must be grater than 0");
+                    throw new Exception("Sum of array must be greater than 0");
                 }
             } else {
-                throw new Exception("Sum of element must be floating pont number");
+                throw new Exception("Sum of elements must be a floating-point number");
             }
         } else {
             throw new ResourceNotFoundException("ConnectionFee not found with id: " + feeId);
         }
     }
+
 
     @Override
     public List<ConnectionFeeChildrenDTO> getFeesByParent(Long id) {
@@ -309,6 +330,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         } else {
             throw new ResourceNotFoundException("ConnectionFee not found with id: " + id);
         }
+    }
+
+    @Override
+    public PagedModel<ConnectionFee> getDeleted(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
     }
 
     private ConnectionFeeChildrenDTO convertToDto(ConnectionFee connectionFee) {
@@ -337,7 +364,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         }
         return dto;
     }
-
 
     private String getCellValue(ConnectionFee connectionFee, int columnIndex) {
         return switch (columnIndex) {

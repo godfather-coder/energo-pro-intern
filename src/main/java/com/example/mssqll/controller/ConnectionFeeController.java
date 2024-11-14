@@ -146,7 +146,7 @@ public class ConnectionFeeController {
     public ResponseEntity<?> divideFee(@PathVariable Long id, @RequestBody Double[] arr) {
         try {
             connectionFeeService.divideFee(id, arr);
-            return ResponseEntity.ok().body("Divide Successfully");
+            return ResponseEntity.ok().body(Collections.singletonMap("message", "Divide Successfully"));
         } catch (Exception e) {
             throw new DivideException(e.getMessage());
         }

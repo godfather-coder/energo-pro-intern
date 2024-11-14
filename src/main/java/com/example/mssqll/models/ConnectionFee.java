@@ -1,11 +1,11 @@
 package com.example.mssqll.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
-import org.hibernate.annotations.Where;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,7 +18,6 @@ import java.util.List;
 @Setter
 @Builder
 @AllArgsConstructor
-@Where(clause = "status != 'SOFT_DELETED'")
 public class ConnectionFee {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -61,6 +60,15 @@ public class ConnectionFee {
     @Column(name = "clarification_date")
     private LocalDateTime clarificationDate;
 
+    @Column(name = "treasury_refund_date")
+    private LocalDate treasuryRefundDate;       //new
+
+    @Column(name = "payment_order_sent_date")
+    private LocalDate paymentOrderSentDate;     //new
+
+    @ElementCollection
+    private List<String> canceledOrders;        //new
+
     @Column(name = "change_date")
     private LocalDateTime changeDate;
 
@@ -99,7 +107,6 @@ public class ConnectionFee {
     @ManyToOne
     @JoinColumn(name = "change_person", nullable = false)
     private User changePerson;
-
 
     @ManyToOne
     @JsonIgnore
@@ -145,4 +152,5 @@ public class ConnectionFee {
         this.tax = connectionFee.getTax();
         this.parent = connectionFee.getParent();
     }
+
 }

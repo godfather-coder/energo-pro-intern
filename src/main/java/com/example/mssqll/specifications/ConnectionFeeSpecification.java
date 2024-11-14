@@ -20,6 +20,9 @@ public class ConnectionFeeSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.isNull(root.get("parent")));
+            if (!filters.containsKey("status")) {
+                predicates.add(criteriaBuilder.notEqual(root.get("status"), "SOFT_DELETED"));
+            }
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {
@@ -126,6 +129,7 @@ public class ConnectionFeeSpecification {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
+
 
     private static LocalDateTime parseToLocalDateTime(String dateTimeStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"); // Adjust pattern as necessary

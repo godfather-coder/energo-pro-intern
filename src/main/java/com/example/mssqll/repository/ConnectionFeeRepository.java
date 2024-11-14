@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +24,11 @@ public interface ConnectionFeeRepository extends JpaRepository<ConnectionFee, Lo
     @Query("update ConnectionFee cf set cf.status = :status where cf.extractionTask = :extractionTask")
     void updateStatusByExtractionTask(Status status, ExtractionTask extractionTask);
 
-    @Query("SELECT SUM(cf.totalAmount) FROM ConnectionFee cf WHERE cf.parent = :parentId")
+    @Query("SELECT SUM(cf.totalAmount) FROM ConnectionFee cf WHERE cf.parent = :parentId and cf.status <> 'REMINDER'")
     Double sumTotalAmountByParentId(ConnectionFee parentId);
+
+    @Query("select count(cf.id) from ConnectionFee  cf where cf.parent.id = :parentId")
+    Integer childNumberByParentId(Long parentId);
 
     @Query(value = """
             WITH Descendants AS (
@@ -38,4 +42,11 @@ public interface ConnectionFeeRepository extends JpaRepository<ConnectionFee, Lo
             SELECT * FROM Descendants;
             """, nativeQuery = true)
     List<ConnectionFee> findAllDescendants(Long parentId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM ConnectionFee cf WHERE cf.parent.id = :parentId AND cf.status = 'REMINDER'")
+    void deleteResidualEntriesByParentId(@Param("parentId") Long parentId);
+
+
 }

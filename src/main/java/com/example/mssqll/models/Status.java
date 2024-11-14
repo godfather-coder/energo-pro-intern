@@ -6,5 +6,6 @@ public enum Status {
     TRANSFERRED,
     TRANSFER_COMPLETE,
     SOFT_DELETED,
-    CANCELD
+    CANCELED,
+    REMINDER
 }

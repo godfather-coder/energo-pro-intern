@@ -2,5 +2,6 @@ package com.example.mssqll.models;
 
 public enum OrderStatus {
     ORDER_COMPLETE,
-    ORDER_INCOMPLETE
+    ORDER_INCOMPLETE,
+    CANCELED
 }
