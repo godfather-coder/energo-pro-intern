@@ -3,6 +3,7 @@ package com.example.mssqll.specifications;
 import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.ExtractionTask;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -20,9 +21,13 @@ public class ConnectionFeeSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.isNull(root.get("parent")));
+
             if (!filters.containsKey("status")) {
                 predicates.add(criteriaBuilder.notEqual(root.get("status"), "SOFT_DELETED"));
             }
+            Join<ConnectionFee, ConnectionFee> childrenJoin = root.join("children", JoinType.LEFT);
+            criteriaBuilder.notEqual(childrenJoin.get("status"), "SOFT_DELETED");
+
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {
@@ -140,5 +145,3 @@ public class ConnectionFeeSpecification {
         }
     }
 }
-
-

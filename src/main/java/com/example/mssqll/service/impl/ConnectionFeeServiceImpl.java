@@ -148,7 +148,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setPaymentOrderSentDate(connectionFeeDetails.getPaymentOrderSentDate());//new
         existingFee.setTreasuryRefundDate(connectionFeeDetails.getTreasuryRefundDate());//new
         if (!Objects.equals(existingFee.getOrderN(), connectionFeeDetails.getOrderN())) {
-            List<String> newLst =  existingFee.getCanceledOrders();
+            List<String> newLst = existingFee.getCanceledOrders();
             newLst.add(existingFee.getOrderN());
             existingFee.setCanceledOrders(newLst);//new
             existingFee.setOrderN(connectionFeeDetails.getOrderN());
@@ -257,6 +257,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         List<ConnectionFee> feeToAdd = new ArrayList<>();
         ConnectionFee connectionFeeCopy;
         ConnectionFee connectionFee1;
+
         if (connectionFee.isPresent()) {
             connectionFee1 = connectionFee.get();
             if (arrSum.isPresent()) {
@@ -265,10 +266,27 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     Double childSum = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
+                        Optional<ConnectionFee> reminderChildOpt = connectionFeeRepository.findReminderChildByParentId(connectionFee1.getId());
+                        boolean reminderUpdated = false;
+                        if (reminderChildOpt.isPresent()) {
+                            ConnectionFee reminderChild = reminderChildOpt.get();
+                            double reminderAmount = reminderChild.getTotalAmount();
+                            double newReminderAmount = reminderAmount - sum;
+
+                            if (newReminderAmount >= 0) {
+                                reminderChild.setTotalAmount(newReminderAmount);
+                                connectionFeeRepository.save(reminderChild);
+                                reminderUpdated = true;
+                            } else {
+                                throw new Exception("Insufficient amount in Reminder child for this operation.");
+                            }
+                        }
                         int childNum = 1;
                         double newElement = connectionFee1.getTotalAmount() - childSum - sum;
-                        Double[] newArr = Arrays.copyOf(arr, arr.length + 1);
-                        newArr[newArr.length - 1] = newElement;
+                        Double[] newArr = Arrays.copyOf(arr, arr.length + (reminderUpdated ? 0 : 1));
+                        if (!reminderUpdated){
+                            newArr[newArr.length - 1] = newElement;
+                        }
                         for (Double d : newArr) {
                             if (d == 0.0) {
                                 continue;
@@ -279,6 +297,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeCopy.setChangePerson(userDetails);
                             connectionFeeCopy.setTransferPerson(userDetails);
                             connectionFeeCopy.setOrderStatus(OrderStatus.ORDER_INCOMPLETE);
+                            connectionFeeCopy.setStatus(Status.TRANSFERRED); // Ensure status is not REMINDER
 
                             String parentQueueNumber = connectionFee1.getQueueNumber() != null
                                     ? connectionFee1.getQueueNumber()
@@ -287,12 +306,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             childNum++;
                             feeToAdd.add(connectionFeeCopy);
                         }
+
                         boolean isLastElement = feeToAdd.get(feeToAdd.size() - 1).getTotalAmount() == newElement;
                         boolean isFullSumMatch = (sum + childSum == connectionFee1.getTotalAmount());
-
-                        if (!isFullSumMatch && isLastElement) {
+                        if (!reminderUpdated && !isFullSumMatch && isLastElement) {
                             ConnectionFee lastFee = feeToAdd.get(feeToAdd.size() - 1);
-                            lastFee.setNote("ნაშთი");
+                            lastFee.setNote("test2");
                             lastFee.setOrderN("ნაშთი");
                             lastFee.setDescription("ნაშთი");
                             lastFee.setPurpose("ნაშთი");

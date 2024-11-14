@@ -5,10 +5,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DialectOverride;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.annotations.Where;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Entity
@@ -113,8 +117,10 @@ public class ConnectionFee {
     @JoinColumn(name = "parent_id", nullable = true)
     private ConnectionFee parent;
 
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Where(clause = "status != 'SOFT_DELETED'")
     private List<ConnectionFee> children;
+
 
     public ConnectionFee() {
 
