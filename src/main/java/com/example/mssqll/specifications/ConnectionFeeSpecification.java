@@ -25,8 +25,7 @@ public class ConnectionFeeSpecification {
             if (!filters.containsKey("status")) {
                 predicates.add(criteriaBuilder.notEqual(root.get("status"), "SOFT_DELETED"));
             }
-            Join<ConnectionFee, ConnectionFee> childrenJoin = root.join("children", JoinType.LEFT);
-            criteriaBuilder.notEqual(childrenJoin.get("status"), "SOFT_DELETED");
+
 
             filters.forEach((key, value) -> {
                 if (value != null) {

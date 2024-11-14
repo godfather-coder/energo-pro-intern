@@ -17,6 +17,7 @@ import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,6 +41,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     private final ExtractionRepository extractionRepository;
     @Autowired
     private final ExtractionTaskRepository extractionTaskRepository;
+    @Autowired
+    private DataSourceTransactionManagerAutoConfiguration dataSourceTransactionManagerAutoConfiguration;
 
     public ConnectionFeeServiceImpl(ConnectionFeeRepository connectionFeeRepository,
                                     ExtractionRepository extractionRepository, ExtractionTaskRepository extractionTaskRepository) {
@@ -189,10 +192,34 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     @Override
     public void softDeleteById(Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
         ConnectionFee connectionFee = connectionFeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
-        connectionFee.setStatus(Status.SOFT_DELETED);
-        connectionFeeRepository.save(connectionFee);
+        if (!connectionFee.getStatus().equals(Status.REMINDER)) {
+            Optional<ConnectionFee> reminderFee = connectionFeeRepository.findReminderChildByParentId(connectionFee.getParent().getId());
+            if (reminderFee.isPresent()) {
+                ConnectionFee reminderFee1 = reminderFee.get();
+                reminderFee1.setTotalAmount(reminderFee1.getTotalAmount() + connectionFee.getTotalAmount());
+            }
+            connectionFee.setStatus(Status.SOFT_DELETED);
+            connectionFee.setChangePerson(userDetails);
+            connectionFeeRepository.save(connectionFee);
+        }
+        List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(connectionFee.getParent().getId());
+        if (connectionFees.size() == 1) {
+            connectionFees.get(0).setStatus(Status.SOFT_DELETED);
+            connectionFees.get(0).setChangePerson(userDetails);
+            connectionFeeRepository.save(connectionFees.get(0));
+            ConnectionFee parent = connectionFee.getParent();
+            if (parent.getProjectID() != null) {
+                parent.setStatus(Status.TRANSFER_COMPLETE);
+            } else {
+                parent.setStatus(Status.TRANSFERRED);
+            }
+            connectionFeeRepository.save(parent);
+        }
+
     }
 
     @Override
@@ -265,6 +292,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 if (sum != 0.0) {
                     Double childSum = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
+                    System.out.println(childSum+" Child sum");
+                    System.out.println(sum + " Sum of arr");
+                    System.out.println(connectionFee1.getTotalAmount()+ " xelmisatsvdomi");
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
                         Optional<ConnectionFee> reminderChildOpt = connectionFeeRepository.findReminderChildByParentId(connectionFee1.getId());
                         boolean reminderUpdated = false;
@@ -284,7 +314,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                         int childNum = 1;
                         double newElement = connectionFee1.getTotalAmount() - childSum - sum;
                         Double[] newArr = Arrays.copyOf(arr, arr.length + (reminderUpdated ? 0 : 1));
-                        if (!reminderUpdated){
+                        if (!reminderUpdated) {
                             newArr[newArr.length - 1] = newElement;
                         }
                         for (Double d : newArr) {
@@ -297,7 +327,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeCopy.setChangePerson(userDetails);
                             connectionFeeCopy.setTransferPerson(userDetails);
                             connectionFeeCopy.setOrderStatus(OrderStatus.ORDER_INCOMPLETE);
-                            connectionFeeCopy.setStatus(Status.TRANSFERRED); // Ensure status is not REMINDER
+                            connectionFeeCopy.setStatus(Status.TRANSFERRED);
 
                             String parentQueueNumber = connectionFee1.getQueueNumber() != null
                                     ? connectionFee1.getQueueNumber()

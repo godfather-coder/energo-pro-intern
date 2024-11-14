@@ -26,7 +26,7 @@ public interface ConnectionFeeRepository extends JpaRepository<ConnectionFee, Lo
     @Query("update ConnectionFee cf set cf.status = :status where cf.extractionTask = :extractionTask")
     void updateStatusByExtractionTask(Status status, ExtractionTask extractionTask);
 
-    @Query("SELECT SUM(cf.totalAmount) FROM ConnectionFee cf WHERE cf.parent = :parentId and cf.status <> 'REMINDER'")
+    @Query("SELECT SUM(cf.totalAmount) FROM ConnectionFee cf WHERE cf.parent = :parentId and cf.status <> 'REMINDER'and cf.status <> 'SOFT_DELETED'")
     Double sumTotalAmountByParentId(ConnectionFee parentId);
 
     @Query("select count(cf.id) from ConnectionFee  cf where cf.parent.id = :parentId")
@@ -53,6 +53,5 @@ public interface ConnectionFeeRepository extends JpaRepository<ConnectionFee, Lo
     @Query("SELECT cf FROM ConnectionFee cf WHERE cf.parent.id = :parentId AND cf.status = 'REMINDER'")
     Optional<ConnectionFee> findReminderChildByParentId(@Param("parentId") Long parentId);
 
-    @Override
-    List<ConnectionFee> findAll(Specification<ConnectionFee> spec);
+
 }
