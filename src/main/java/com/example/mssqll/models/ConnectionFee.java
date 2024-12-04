@@ -65,13 +65,18 @@ public class ConnectionFee {
     private LocalDateTime clarificationDate;
 
     @Column(name = "treasury_refund_date")
-    private LocalDate treasuryRefundDate;       //new
+    private LocalDate treasuryRefundDate;
 
     @Column(name = "payment_order_sent_date")
-    private LocalDate paymentOrderSentDate;     //new
+    private LocalDate paymentOrderSentDate;
 
     @ElementCollection
-    private List<String> canceledOrders;        //new
+    @Nationalized
+    private List<String> canceledOrders;
+
+    @ElementCollection
+    @Nationalized
+    private List<String> canceledProject;
 
     @Column(name = "change_date")
     private LocalDateTime changeDate;

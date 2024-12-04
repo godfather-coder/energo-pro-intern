@@ -120,13 +120,15 @@ public class ConnectionFeeController {
 
     @GetMapping("/download")
     public ResponseEntity<byte[]> downloadExcel(
+            @RequestParam Map<String, String> filters,
             @RequestParam String accessToken) throws IOException {
         TokenValidationResult res = jwtService.validateTokenWithoutUserName(accessToken);
         if (!res.isValid()) {
             throw new TokenValidationException(res.getMessage());
         }
-        List<ConnectionFee> connectionFees = connectionFeeService.getAllConnectionFees();
-        ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFees);
+        Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
+        System.out.println(connectionFeeService.getDownloadDataBySpec(spec).size());
+        ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFeeService.getDownloadDataBySpec(spec));
 
         HttpHeaders headers = new HttpHeaders();
         String time = LocalDateTime.now(ZoneId.of("Asia/Tbilisi"))

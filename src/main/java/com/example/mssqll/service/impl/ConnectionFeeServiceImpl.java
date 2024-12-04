@@ -141,7 +141,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             existingFee.setChangeDate(LocalDateTime.now());
             existingFee.setChangePerson(userDetails);
         }
-        existingFee.setProjectID(connectionFeeDetails.getProjectID());
         existingFee.setExtractionId(connectionFeeDetails.getExtractionId());
         existingFee.setNote(connectionFeeDetails.getNote());
         existingFee.setExtractionDate(connectionFeeDetails.getExtractionDate());
@@ -150,6 +149,32 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setDescription(connectionFeeDetails.getDescription());
         existingFee.setPaymentOrderSentDate(connectionFeeDetails.getPaymentOrderSentDate());//new
         existingFee.setTreasuryRefundDate(connectionFeeDetails.getTreasuryRefundDate());//new
+        if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
+            List<String> proj = existingFee.getCanceledProject();
+            if (!proj.isEmpty()) {
+                if (connectionFeeDetails.getProjectID() != proj.get(proj.size() - 1)) {
+                    proj.add(existingFee.getProjectID());
+                }
+            } else {
+                proj.add(existingFee.getProjectID());
+            }
+            existingFee.setCanceledProject(proj);
+            existingFee.setProjectID(connectionFeeDetails.getProjectID());
+        }
+        if (connectionFeeDetails.getOrderStatus() == OrderStatus.CANCELED) {
+            List<String> proj = existingFee.getCanceledProject();
+            if (!proj.isEmpty()) {
+                if (!Objects.equals(connectionFeeDetails.getProjectID(), proj.get(proj.size() - 1))) {
+                    proj.add(existingFee.getProjectID());
+                }
+            } else {
+                proj.add(existingFee.getProjectID());
+            }
+
+            existingFee.setCanceledProject(proj);
+        }
+        existingFee.setProjectID(connectionFeeDetails.getProjectID());
+
         if (!Objects.equals(existingFee.getOrderN(), connectionFeeDetails.getOrderN())) {
             List<String> newLst = existingFee.getCanceledOrders();
             newLst.add(existingFee.getOrderN());
@@ -162,12 +187,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         } else {
             existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         }
-        if (!Objects.equals(existingFee.getOrderN(), "") &&
-                existingFee.getOrderN() != null && !existingFee.getOrderN().trim().isEmpty()) {
-            existingFee.setOrderStatus(OrderStatus.ORDER_COMPLETE);
-        } else {
-            existingFee.setOrderStatus(OrderStatus.ORDER_INCOMPLETE);
-        }
+        existingFee.setOrderStatus(connectionFeeDetails.getOrderStatus());
         return connectionFeeRepository.save(existingFee);
     }
 
@@ -196,7 +216,13 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         User userDetails = (User) authentication.getPrincipal();
         ConnectionFee connectionFee = connectionFeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
-        if (!connectionFee.getStatus().equals(Status.REMINDER)) {
+        List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(connectionFee.getParent().getId());
+        if (Objects.equals(connectionFeeRepository.sumTotalAmountByParentId(connectionFee.getParent()), connectionFee.getParent().getTotalAmount())) {
+            connectionFee.setNote("ნაშთი");
+            connectionFee.setStatus(Status.REMINDER);
+            connectionFee.setOrderN("ნაშთი");
+            connectionFeeRepository.save(connectionFee);
+        } else if (!connectionFee.getStatus().equals(Status.REMINDER)) {
             Optional<ConnectionFee> reminderFee = connectionFeeRepository.findReminderChildByParentId(connectionFee.getParent().getId());
             if (reminderFee.isPresent()) {
                 ConnectionFee reminderFee1 = reminderFee.get();
@@ -205,9 +231,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             connectionFee.setStatus(Status.SOFT_DELETED);
             connectionFee.setChangePerson(userDetails);
             connectionFeeRepository.save(connectionFee);
-        }
-        List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(connectionFee.getParent().getId());
-        if (connectionFees.size() == 1) {
+        } else if (connectionFees.size() == 1) {
             connectionFees.get(0).setStatus(Status.SOFT_DELETED);
             connectionFees.get(0).setChangePerson(userDetails);
             connectionFeeRepository.save(connectionFees.get(0));
@@ -239,6 +263,8 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 "გადამხდელის იდენტიფიკატორი",//11
                 "მიზანი",//12
                 "აღწერა",//13
+                "შემცველელი",//14
+                "გაუქმებული პროექტები",//15
         };
 
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -292,9 +318,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 if (sum != 0.0) {
                     Double childSum = (connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) != null)
                             ? connectionFeeRepository.sumTotalAmountByParentId(connectionFee1) : 0.0;
-                    System.out.println(childSum+" Child sum");
-                    System.out.println(sum + " Sum of arr");
-                    System.out.println(connectionFee1.getTotalAmount()+ " xelmisatsvdomi");
                     if (sum <= connectionFee1.getTotalAmount() && (childSum + sum) <= connectionFee1.getTotalAmount()) {
                         Optional<ConnectionFee> reminderChildOpt = connectionFeeRepository.findReminderChildByParentId(connectionFee1.getId());
                         boolean reminderUpdated = false;
@@ -387,6 +410,11 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
     }
 
+    @Override
+    public List<ConnectionFee> getDownloadDataBySpec(Specification<ConnectionFee> spec) {
+        return connectionFeeRepository.findAll(spec);
+    }
+
     private ConnectionFeeChildrenDTO convertToDto(ConnectionFee connectionFee) {
         ConnectionFeeChildrenDTO dto = new ConnectionFeeChildrenDTO();
         dto.setId(connectionFee.getId());
@@ -440,6 +468,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             case 11 -> connectionFee.getTax();
             case 12 -> connectionFee.getPurpose();
             case 13 -> connectionFee.getDescription();
+            case 14 ->
+                    connectionFee.getChangePerson().getLastName() + " " + connectionFee.getChangePerson().getFirstName();
+            case 15 -> connectionFee.getCanceledOrders().toString();
             default -> "";
         };
     }

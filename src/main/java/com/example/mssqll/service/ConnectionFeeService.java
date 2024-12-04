@@ -26,4 +26,5 @@ public interface ConnectionFeeService {
    void divideFee(Long feeId,Double[] arr);
    List<ConnectionFeeChildrenDTO> getFeesByParent(Long id);
    PagedModel<ConnectionFee> getDeleted(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir);
+   List<ConnectionFee> getDownloadDataBySpec(Specification<ConnectionFee> spec);
 }
