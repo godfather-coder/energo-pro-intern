@@ -68,8 +68,6 @@ public class ConnectionFeeResponseDto {
 
     private UserResponseDto changePerson;
 
-    private ConnectionFee parent;
-
     private List<ConnectionFeeResponseDto> children;
 
 }

@@ -473,9 +473,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         ConnectionFeeResponseDto cfDto;
         for (ConnectionFee cf : page.getContent()) {
             cfDto = castToDto(cf);
-            for(ConnectionFeeResponseDto cfd : cfDto.getChildren()){
-                System.out.println(cfd);
-            }
             cfDtos.add(cfDto);
         }
         Page<ConnectionFeeResponseDto> cfDtoPage = new PageImpl<>(cfDtos);
@@ -484,13 +481,14 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
     private ConnectionFeeResponseDto castToDto(ConnectionFee cf) {
         ConnectionFeeResponseDto cfd = baseCast(cf);
+        List<ConnectionFeeResponseDto> emptyDto = new ArrayList<>();
         List<ConnectionFeeResponseDto> cfDtos = new ArrayList<>();
         if (!cf.getChildren().isEmpty()) {
-//            System.out.println("enter in the if");
+            ConnectionFeeResponseDto cfChild1;
             for (ConnectionFee cfChild : cf.getChildren()) {
-//                System.out.println(cf.getChildren().size());
-//                System.out.println("enter in the loop");
-                cfDtos.add(baseCast(cfChild));
+                cfChild1 = baseCast(cfChild);
+                cfChild1.setChildren(emptyDto);
+                cfDtos.add(cfChild1);
             }
         }
         cfd.setChildren(cfDtos);
