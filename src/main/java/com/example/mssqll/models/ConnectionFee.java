@@ -12,11 +12,10 @@ import org.hibernate.annotations.Where;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Entity
-@Table(name = "connection_fees")
+@Table(name = "connection_fees", indexes = @Index(columnList = "change_person, parent_id,transfer_person"))
 @Data
 @Getter
 @Setter

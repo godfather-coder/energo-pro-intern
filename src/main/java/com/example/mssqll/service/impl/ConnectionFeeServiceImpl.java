@@ -2,6 +2,8 @@ package com.example.mssqll.service.impl;
 
 
 import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
+import com.example.mssqll.dto.response.ConnectionFeeResponseDto;
+import com.example.mssqll.dto.response.UserResponseDto;
 import com.example.mssqll.models.*;
 import com.example.mssqll.repository.ConnectionFeeRepository;
 import com.example.mssqll.repository.ExtractionRepository;
@@ -18,6 +20,8 @@ import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -51,10 +55,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         this.extractionTaskRepository = extractionTaskRepository;
     }
 
-    @Override
-    public List<ConnectionFee> getAllConnectionFees() {
-        return connectionFeeRepository.findAll();
-    }
 
     @Override
     public PagedModel<ConnectionFee> getAllFee(int page, int size) {
@@ -124,7 +124,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         return connectionFeeRepository.findById(id);
     }
 
-
     @Override
     public ConnectionFee updateFee(Long connectionFeeId, ConnectionFee connectionFeeDetails) {
         ConnectionFee existingFee = connectionFeeRepository.findById(connectionFeeId)
@@ -190,13 +189,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setOrderStatus(connectionFeeDetails.getOrderStatus());
         return connectionFeeRepository.save(existingFee);
     }
-
-    @Override
-    public PagedModel<ConnectionFee> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
-    }
-
 
     @Override
     public void deleteByTaskId(Long taskId) {
@@ -404,11 +396,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         }
     }
 
-    @Override
-    public PagedModel<ConnectionFee> getDeleted(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        return new PagedModel<>(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort)));
-    }
 
     @Override
     public List<ConnectionFee> getDownloadDataBySpec(Specification<ConnectionFee> spec) {
@@ -475,4 +462,79 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         };
     }
 
+    @Override
+    public PagedModel<?> letDoFilter(Specification<ConnectionFee> spec, int page, int size, String sortBy, String sortDir) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        return new PagedModel<>(castToDtos(connectionFeeRepository.findAll(spec, PageRequest.of(page, size, sort))));
+    }
+
+    private Page<ConnectionFeeResponseDto> castToDtos(Page<ConnectionFee> page) {
+        List<ConnectionFeeResponseDto> cfDtos = new ArrayList<>();
+        ConnectionFeeResponseDto cfDto;
+        for (ConnectionFee cf : page.getContent()) {
+            cfDto = castToDto(cf);
+            for(ConnectionFeeResponseDto cfd : cfDto.getChildren()){
+                System.out.println(cfd);
+            }
+            cfDtos.add(cfDto);
+        }
+        Page<ConnectionFeeResponseDto> cfDtoPage = new PageImpl<>(cfDtos);
+        return cfDtoPage;
+    }
+
+    private ConnectionFeeResponseDto castToDto(ConnectionFee cf) {
+        ConnectionFeeResponseDto cfd = baseCast(cf);
+        List<ConnectionFeeResponseDto> cfDtos = new ArrayList<>();
+        if (!cf.getChildren().isEmpty()) {
+//            System.out.println("enter in the if");
+            for (ConnectionFee cfChild : cf.getChildren()) {
+//                System.out.println(cf.getChildren().size());
+//                System.out.println("enter in the loop");
+                cfDtos.add(baseCast(cfChild));
+            }
+        }
+        cfd.setChildren(cfDtos);
+        return cfd;
+    }
+
+    private ConnectionFeeResponseDto baseCast(ConnectionFee cf) {
+        return ConnectionFeeResponseDto.builder()
+                .id(cf.getId())
+                .orderStatus(cf.getOrderStatus())
+                .status(cf.getStatus())
+                .orderN(cf.getOrderN())
+                .region(cf.getRegion())
+                .serviceCenter(cf.getServiceCenter())
+                .queueNumber(cf.getQueueNumber())
+                .projectID(cf.getProjectID())
+                .withdrawType(cf.getWithdrawType())
+                .extractionTask(null)
+                .clarificationDate(cf.getClarificationDate())
+                .treasuryRefundDate(cf.getTreasuryRefundDate())
+                .paymentOrderSentDate(cf.getPaymentOrderSentDate())
+                .canceledOrders(cf.getCanceledOrders())
+                .canceledProject(cf.getCanceledProject())
+                .changeDate(cf.getChangeDate())
+                .transferDate(cf.getTransferDate())
+                .extractionDate(cf.getExtractionDate())
+                .totalAmount(cf.getTotalAmount())
+                .purpose(cf.getPurpose())
+                .description(cf.getDescription())
+                .tax(cf.getTax())
+                .transferPerson(castUserToDto(cf.getTransferPerson()))
+                .changePerson(castUserToDto(cf.getChangePerson()))
+                .build();
+    }
+
+    private UserResponseDto castUserToDto(User user) {
+        return UserResponseDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole())
+                .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
 }
