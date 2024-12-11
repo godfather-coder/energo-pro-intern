@@ -1,11 +1,8 @@
 package com.example.mssqll.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.DialectOverride;
 import org.hibernate.annotations.Nationalized;
 import org.hibernate.annotations.Where;
 
@@ -15,7 +12,14 @@ import java.util.List;
 
 
 @Entity
-@Table(name = "connection_fees", indexes = @Index(columnList = "change_person, parent_id,transfer_person"))
+@Table(name = "connection_fees",
+        indexes = {
+                @Index(name = "idx_change_person", columnList = "change_person"),
+                @Index(name = "idx_parent_id", columnList = "parent_id"),
+                @Index(name = "idx_transfer_person", columnList = "transfer_person"),
+                @Index(name = "idx_status", columnList = "status"),
+                @Index(name = "idx_transfer_date", columnList = "transfer_date")
+        })
 @Data
 @Getter
 @Setter

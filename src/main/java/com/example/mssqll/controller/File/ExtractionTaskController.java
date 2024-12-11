@@ -23,6 +23,7 @@ public class ExtractionTaskController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
+        System.out.println("ds");
         return new ApiResponse<>(true, "Data fetched",extractionTaskService.getExtractionTasks(adjustedPage,size));
     }
     @GetMapping("/find-by-name/{fileName}")

@@ -1,6 +1,7 @@
 package com.example.mssqll.models;
 
 import jakarta.persistence.*;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.*;
@@ -19,7 +20,11 @@ import java.util.List;
 @Entity
 @FilterDef(name = "activeFilter", parameters = @ParamDef(name = "role", type = String.class))
 @Filter(name = "activeFilter", condition = "role != :role")
-@Table(name = "users")
+@Table(name = "users",
+        indexes = {
+                @Index(name = "idx_user_email", columnList = "email")
+        }
+)
 public class User implements UserDetails {
 
     @Id

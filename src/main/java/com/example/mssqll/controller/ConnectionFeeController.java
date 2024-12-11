@@ -10,6 +10,7 @@ import com.example.mssqll.utiles.exceptions.DivideException;
 import com.example.mssqll.utiles.exceptions.TokenValidationException;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpHeaders;
@@ -96,7 +97,9 @@ public class ConnectionFeeController {
             @RequestParam(defaultValue = "DESC") String sortDir) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
-        return ResponseEntity.ok().body(connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir));
+        PagedModel<?> resPage = connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir);
+        System.out.println(resPage.getMetadata().totalPages());
+        return ResponseEntity.ok().body(resPage);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER','OPERATOR')")

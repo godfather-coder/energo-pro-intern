@@ -8,7 +8,10 @@ import org.hibernate.annotations.Nationalized;
 
 
 @Entity
-@Table(name = "business_units")
+@Table(name = "business_units",
+        indexes = {
+                @Index(name = "idx_parent_id", columnList = "parent_id")
+        })
 @Getter
 @Setter
 @Data
