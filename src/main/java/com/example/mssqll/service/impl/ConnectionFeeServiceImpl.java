@@ -469,14 +469,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     }
 
     private Page<ConnectionFeeResponseDto> castToDtos(Page<ConnectionFee> page) {
-        List<ConnectionFeeResponseDto> cfDtos = new ArrayList<>();
-        ConnectionFeeResponseDto cfDto;
-        for (ConnectionFee cf : page.getContent()) {
-            cfDto = castToDto(cf);
-            cfDtos.add(cfDto);
-        }
-        Page<ConnectionFeeResponseDto> cfDtoPage = new PageImpl<>(cfDtos);
-        return cfDtoPage;
+        List<ConnectionFeeResponseDto> cfDtos = page.getContent()
+                .stream()
+                .map(this::castToDto)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(cfDtos, page.getPageable(), page.getTotalElements());
     }
 
     private ConnectionFeeResponseDto castToDto(ConnectionFee cf) {

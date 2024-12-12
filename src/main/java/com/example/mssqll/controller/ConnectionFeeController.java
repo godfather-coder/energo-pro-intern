@@ -98,7 +98,6 @@ public class ConnectionFeeController {
         int adjustedPage = (page < 1) ? 0 : page - 1;
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
         PagedModel<?> resPage = connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir);
-        System.out.println(resPage.getMetadata().totalPages());
         return ResponseEntity.ok().body(resPage);
     }
 
@@ -130,7 +129,6 @@ public class ConnectionFeeController {
             throw new TokenValidationException(res.getMessage());
         }
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
-        System.out.println(connectionFeeService.getDownloadDataBySpec(spec).size());
         ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFeeService.getDownloadDataBySpec(spec));
 
         HttpHeaders headers = new HttpHeaders();
