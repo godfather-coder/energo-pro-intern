@@ -9,8 +9,8 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>mssqll</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>docu</artifactId>
+    <version>1</version>
     <name>mssqll</name>
     <description>mssqll</description>
     <url/>
