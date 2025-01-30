@@ -5,5 +5,6 @@ public enum FileStatus {
     WARNING,
     TRANSFERRED_GOOD,
     TRANSFERRED_WARNING,
-    SOFT_DELETED
+    SOFT_DELETED,
+    HISTORY,
 }

@@ -12,10 +12,10 @@ import com.example.mssqll.service.ConnectionFeeService;
 import com.example.mssqll.utiles.exceptions.FileAlreadyTransferredException;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import lombok.SneakyThrows;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.hssf.util.HSSFColor;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +29,15 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,8 +49,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     private final ExtractionRepository extractionRepository;
     @Autowired
     private final ExtractionTaskRepository extractionTaskRepository;
-    @Autowired
-    private DataSourceTransactionManagerAutoConfiguration dataSourceTransactionManagerAutoConfiguration;
 
     public ConnectionFeeServiceImpl(ConnectionFeeRepository connectionFeeRepository,
                                     ExtractionRepository extractionRepository, ExtractionTaskRepository extractionTaskRepository) {
@@ -54,7 +56,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         this.extractionRepository = extractionRepository;
         this.extractionTaskRepository = extractionTaskRepository;
     }
-
 
     @Override
     public PagedModel<ConnectionFee> getAllFee(int page, int size) {
@@ -381,7 +382,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         }
     }
 
-
     @Override
     public List<ConnectionFeeChildrenDTO> getFeesByParent(Long id) {
         Optional<ConnectionFee> connectionFee = connectionFeeRepository.findById(id);
@@ -395,7 +395,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             throw new ResourceNotFoundException("ConnectionFee not found with id: " + id);
         }
     }
-
 
     @Override
     public List<ConnectionFee> getDownloadDataBySpec(Specification<ConnectionFee> spec) {
@@ -533,4 +532,174 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 .updatedAt(user.getUpdatedAt())
                 .build();
     }
+
+    @Override
+    public Integer uploadHistory(MultipartFile file) throws IOException {
+        LocalDateTime today = LocalDateTime.now();
+        ExtractionTask task;
+        try {
+            task = extractionTaskRepository.save(new ExtractionTask(today, file.getOriginalFilename(), FileStatus.HISTORY));
+        } catch (Exception e) {
+            return 0;
+        }
+        Map<Integer, String> PAYMENT_MAPPING = new HashMap<>();
+        PAYMENT_MAPPING.put(1, "1 (პირველი გადახდა)");
+        PAYMENT_MAPPING.put(2, "2 (მეორე გადახდა)");
+        PAYMENT_MAPPING.put(3, "3 (სრული საფასურის გადახდა)");
+        PAYMENT_MAPPING.put(4, "4 (ერთანი გადახდა, გადანაწილებული რამოდენიმე პროექტის საფასურად)");
+        PAYMENT_MAPPING.put(5, "5 (სავარაუდოდ არაა ახალი მიერთების საფასური)");
+        PAYMENT_MAPPING.put(6, "6 (თანხის დაბრუნება)");
+        PAYMENT_MAPPING.put(7, "7 (გადანაწილებული გადახდა / რამოდენიმეჯერ გადახდა)");
+        PAYMENT_MAPPING.put(8, "8 (სააბონენტო ბარათზე თანხის დასმა)");
+        PAYMENT_MAPPING.put(9, "9 (ხაზის მშენებლობა / არარეგულირებული პროექტები (პირველი ან სრული გადახდა))");
+        PAYMENT_MAPPING.put(10, "10 (სისტემის ნებართვის საფასური)");
+        PAYMENT_MAPPING.put(19, "19 (ხაზის მშენებლობა / არარეგულირებული პროექტები (მეორე გადახდა))");
+        PAYMENT_MAPPING.put(11, "11 (სააბონენტო ბარათიდან თანხის გადმოტანა)");
+        PAYMENT_MAPPING.put(12, "12 (ჯარიმის გადატანა)");
+        PAYMENT_MAPPING.put(13, "13 (საპროექტო ტრასის შეტანხმება)");
+        PAYMENT_MAPPING.put(14, "14 (ჰესები DDSH)");
+        PAYMENT_MAPPING.put(15, "15 (ჰესები DDNA)");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User userDetails = (User) authentication.getPrincipal();
+        List<ConnectionFee> connectionFees = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int i = 2; i <= sheet.getLastRowNum(); i++) { // Start from row 2 to skip headers
+                Row row = sheet.getRow(i);
+                ConnectionFee fee = new ConnectionFee();
+                fee.setId((getLongCellValue(row.getCell(0))));
+                fee.setOrderN(getStringCellValue(row.getCell(1)));
+                fee.setRegion(getStringCellValue(row.getCell(2)));
+                fee.setServiceCenter(getStringCellValue(row.getCell(3)));
+                fee.setProjectID(getStringCellValue(row.getCell(4)));
+                Integer paymentType = (int) row.getCell(5).getNumericCellValue();
+                fee.setWithdrawType(PAYMENT_MAPPING.getOrDefault(paymentType, "Unknown payment type"));
+                LocalDate date = LocalDate.parse(row.getCell(6).toString(), formatter);
+                fee.setExtractionDate(date);
+                fee.setTotalAmount(getDoubleCellValue(row.getCell(7)));
+                fee.setPurpose(getStringCellValue(row.getCell(8)));
+                fee.setDescription(getStringCellValue(row.getCell(9)));
+                fee.setTax(getStringCellValue(row.getCell(10)));
+                fee.setNote(getStringCellValue(row.getCell(12)));
+
+                if (row.getCell(11) != null && !row.getCell(11).toString().isEmpty()) {
+                    try {
+                        LocalDate clarificationdate = LocalDate.parse(row.getCell(11).toString(), formatter);
+                        LocalDateTime clarificationDate = clarificationdate.atStartOfDay();
+                        fee.setClarificationDate(clarificationDate);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing date: " + row.getCell(11).toString());
+                        System.out.println("Line: " + row.getRowNum()+" Col"+11);
+                        System.out.println(e.getMessage());
+                        fee.setClarificationDate(null);
+                    }
+                } else {
+                    fee.setClarificationDate(null);
+                }
+                if (row.getCell(13) != null && !row.getCell(13).toString().isEmpty()) {
+                    try {
+                        LocalDate treasuryRefundDate = LocalDate.parse(row.getCell(13).toString(), formatter);
+                        fee.setTreasuryRefundDate(treasuryRefundDate);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing date: " + row.getCell(13).toString());
+                        System.out.println("Line: " + row.getRowNum()+" Col"+13);
+                        System.out.println(e.getMessage());
+
+                        fee.setTreasuryRefundDate(null);
+                    }
+                } else {
+                    fee.setTreasuryRefundDate(null);
+                }
+                if (row.getCell(14) != null && !row.getCell(14).toString().isEmpty()) {
+                    try {
+                        LocalDate PaymentOrderSentDate = LocalDate.parse(row.getCell(14).toString(), formatter);
+                        fee.setPaymentOrderSentDate(PaymentOrderSentDate);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing date: " + row.getCell(14).toString());
+                        System.out.println("Line: " + row.getRowNum()+" Col"+14);
+                        System.out.println(e.getMessage());
+
+                        fee.setPaymentOrderSentDate(null);
+                    }
+                } else {
+                    fee.setPaymentOrderSentDate(null);
+                }
+//                fee.setOrderStatus(OrderStatus.valueOf(getStringCellValue(row.getCell(1))));
+                List<String> canceledProjects = new ArrayList<>();
+                canceledProjects.add(row.getCell(16).toString());
+                canceledProjects.add(row.getCell(17).toString());
+                canceledProjects.add(row.getCell(18).toString());
+                fee.setCanceledProject(canceledProjects);
+                fee.setStatus(Status.TRANSFERRED);
+                fee.setTransferDate(LocalDateTime.now());
+                fee.setExtractionId(0L);
+                fee.setTransferPerson(userDetails);
+                fee.setChangePerson(userDetails);
+                fee.setExtractionTask(task);
+                connectionFees.add(fee);
+
+            }
+            try {
+                try {
+                    connectionFees.forEach(System.out::println);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        System.out.println("Processed " + connectionFees.size() + " records");
+        return connectionFees.size();
+    }
+
+    // Helper Methods
+    private static String getStringCellValue(Cell cell) {
+        if (cell == null) return null;
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf((long) cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return null;
+        }
+    }
+
+    private static Long getLongCellValue(Cell cell) {
+        if (cell == null) return null;
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return (long) cell.getNumericCellValue();
+        } else if (cell.getCellType() == CellType.STRING) {
+            try {
+                return Long.parseLong(cell.getStringCellValue().trim());
+            } catch (NumberFormatException e) {
+                return null; // Or throw an exception if this is critical
+            }
+        }
+        return null;
+    }
+
+    private static Double getDoubleCellValue(Cell cell) {
+        if (cell == null) return null;
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return cell.getNumericCellValue();
+        } else if (cell.getCellType() == CellType.STRING) {
+            try {
+                return Double.parseDouble(cell.getStringCellValue().trim());
+            } catch (NumberFormatException e) {
+                return null; // Or throw an exception if this is critical
+            }
+        }
+        return null;
+    }
+
+
 }
+
+

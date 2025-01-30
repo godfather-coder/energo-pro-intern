@@ -26,7 +26,6 @@ public class ConnectionFeeSpecification {
                 predicates.add(criteriaBuilder.notEqual(root.get("status"), "SOFT_DELETED"));
             }
 
-
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {

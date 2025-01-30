@@ -4,6 +4,7 @@ import com.example.mssqll.dto.response.ConnectionFeeChildrenDTO;
 import com.example.mssqll.models.ConnectionFee;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,4 +39,6 @@ public interface ConnectionFeeService {
     List<ConnectionFeeChildrenDTO> getFeesByParent(Long id);
 
     List<ConnectionFee> getDownloadDataBySpec(Specification<ConnectionFee> spec);
+
+    Integer uploadHistory(MultipartFile file) throws IOException;
 }

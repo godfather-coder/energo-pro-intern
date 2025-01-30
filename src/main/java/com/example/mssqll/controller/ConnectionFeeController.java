@@ -7,17 +7,19 @@ import com.example.mssqll.service.ConnectionFeeService;
 import com.example.mssqll.service.impl.JwtService;
 import com.example.mssqll.specifications.ConnectionFeeSpecification;
 import com.example.mssqll.utiles.exceptions.DivideException;
+import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import com.example.mssqll.utiles.exceptions.TokenValidationException;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -163,6 +165,31 @@ public class ConnectionFeeController {
             );
         } catch (Exception e) {
             return ResponseEntity.noContent().build();
+        }
+    }
+
+
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PostMapping("/upload-history")
+    public ResponseEntity<?> handleFileUpload(@RequestParam("file") MultipartFile file) {
+        Integer count = 0;
+        if (file.isEmpty()) {
+            throw new ResourceNotFoundException("Please select a file to upload");
+        }
+        try {
+            System.out.println(0);
+            count = connectionFeeService.uploadHistory(file);
+            System.out.println("0-1");
+            return ResponseEntity.ok(
+                    Map.of(
+                            "message", "Successfully uploaded",
+                            "count", count
+                    ));
+
+        } catch (Exception e) {
+            System.out.println(1);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to process the file: " + e.getMessage());
         }
     }
 

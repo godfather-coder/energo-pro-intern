@@ -1,10 +1,13 @@
 package com.example.mssqll.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.*;
-import org.hibernate.annotations.Nationalized;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,7 +21,8 @@ import java.util.List;
                 @Index(name = "idx_parent_id", columnList = "parent_id"),
                 @Index(name = "idx_transfer_person", columnList = "transfer_person"),
                 @Index(name = "idx_status", columnList = "status"),
-                @Index(name = "idx_transfer_date", columnList = "transfer_date")
+                @Index(name = "idx_transfer_date", columnList = "transfer_date"),
+                @Index(name = "idx_extraction_date", columnList = "extraction_date")
         })
 @Data
 @Getter
@@ -88,6 +92,7 @@ public class ConnectionFee {
     private LocalDateTime transferDate;
 
     @Column(name = "exextraction_id")
+    @Nullable
     private Long extractionId;
 
     @Column(name = "note")
@@ -118,16 +123,17 @@ public class ConnectionFee {
 
     @ManyToOne
     @JoinColumn(name = "change_person", nullable = false)
+    @Nullable
     private User changePerson;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // Lazy loading to improve performance
     @JsonIgnore
     @JoinColumn(name = "parent_id", nullable = true)
     private ConnectionFee parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Where(clause = "status != 'SOFT_DELETED'")
-    private List<ConnectionFee> children;
+    @Where(clause = "status != 'SOFT_DELETED'") // Filter out soft-deleted children
+    private List<ConnectionFee> children ;
 
 
     public ConnectionFee() {

@@ -66,7 +66,6 @@ public class ExcelServiceImpl implements ExcelService {
 
                     Status status = Status.GOOD;
 
-
                     for (int cellNum = 0; cellNum < row.getLastCellNum(); cellNum++) {
                         Cell cell = row.getCell(cellNum, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
 
