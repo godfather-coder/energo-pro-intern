@@ -12,14 +12,12 @@ import com.example.mssqll.service.ConnectionFeeService;
 import com.example.mssqll.utiles.exceptions.FileAlreadyTransferredException;
 import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import lombok.SneakyThrows;
-import org.apache.poi.hssf.util.HSSFColor;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +31,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -565,95 +562,156 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         List<ConnectionFee> connectionFees = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+        try {
+            Workbook workbook = new XSSFWorkbook(file.getInputStream());
             Sheet sheet = workbook.getSheetAt(0);
+
             for (int i = 2; i <= sheet.getLastRowNum(); i++) { // Start from row 2 to skip headers
                 Row row = sheet.getRow(i);
-                ConnectionFee fee = new ConnectionFee();
-                fee.setId((getLongCellValue(row.getCell(0))));
-                fee.setOrderN(getStringCellValue(row.getCell(1)));
-                fee.setRegion(getStringCellValue(row.getCell(2)));
-                fee.setServiceCenter(getStringCellValue(row.getCell(3)));
-                fee.setProjectID(getStringCellValue(row.getCell(4)));
-                Integer paymentType = (int) row.getCell(5).getNumericCellValue();
-                fee.setWithdrawType(PAYMENT_MAPPING.getOrDefault(paymentType, "Unknown payment type"));
-                LocalDate date = LocalDate.parse(row.getCell(6).toString(), formatter);
-                fee.setExtractionDate(date);
-                fee.setTotalAmount(getDoubleCellValue(row.getCell(7)));
-                fee.setPurpose(getStringCellValue(row.getCell(8)));
-                fee.setDescription(getStringCellValue(row.getCell(9)));
-                fee.setTax(getStringCellValue(row.getCell(10)));
-                fee.setNote(getStringCellValue(row.getCell(12)));
 
-                if (row.getCell(11) != null && !row.getCell(11).toString().isEmpty()) {
+                // ✅ Skip empty rows
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                ConnectionFee fee = new ConnectionFee();
+                try {
+                    fee.setId(getLongCellValue(row.getCell(0)));//1 აიდი
+                    fee.setOrderN(getStringCellValue(row.getCell(1)));//2 ორდეირს ნომერი
+                    fee.setRegion(getStringCellValue(row.getCell(2)));//3 რეგიონი
+                    fee.setServiceCenter(getStringCellValue(row.getCell(3)));//4 მომსახურების ცენტრი
+                    fee.setProjectID(getStringCellValue(row.getCell(4)));//5 პროექტის ნომერი
+
+                    Integer paymentType = (int) row.getCell(5).getNumericCellValue();//6 ტიპი
+                    fee.setWithdrawType(PAYMENT_MAPPING.getOrDefault(paymentType, "Unknown payment type"));
+
+                    // ✅ Date Handling
                     try {
-                        LocalDate clarificationdate = LocalDate.parse(row.getCell(11).toString(), formatter);
-                        LocalDateTime clarificationDate = clarificationdate.atStartOfDay();
-                        fee.setClarificationDate(clarificationDate);
+                        LocalDate extractionDate = null;
+                        if (row.getCell(6) != null && !row.getCell(6).toString().trim().isEmpty()) {
+                            if (DateUtil.isCellDateFormatted(row.getCell(6))) {
+                                extractionDate = row.getCell(6).getLocalDateTimeCellValue().toLocalDate();
+                            } else {
+                                try {
+                                    extractionDate = LocalDate.parse(row.getCell(6).toString(), formatter);
+                                } catch (Exception dateEx) {
+                                    // Log specific error for invalid date format
+                                    logRowError(row, 6, dateEx);
+                                    extractionDate = null; // Set to null if parsing fails
+                                }
+                            }
+                        }
+
+                        // Set extractionDate to the fee object
+                        fee.setExtractionDate(extractionDate);
+
                     } catch (Exception e) {
-                        System.err.println("Error parsing date: " + row.getCell(11).toString());
-                        System.out.println("Line: " + row.getRowNum()+" Col"+11);
-                        System.out.println(e.getMessage());
+                        // Catch any other unexpected errors
+                        logRowError(row, 6, e);
+                        fee.setExtractionDate(null); // Set to null if there is any error
+                    }
+
+
+                    fee.setTotalAmount(getDoubleCellValue(row.getCell(7)));//8 ბრუნვა
+                    fee.setPurpose(getStringCellValue(row.getCell(8)));//9 დანიშნულება
+                    fee.setDescription(getStringCellValue(row.getCell(9))); //10 დამატებითი ინფირმაცია
+                    fee.setTax(getStringCellValue(row.getCell(10)));// 11 გარკვევის თარიღი
+                    fee.setNote(getStringCellValue(row.getCell(12)));// 13 შენიშვნა
+
+                    // Clarification Date
+                    try {
+                        if (row.getCell(11) != null && !row.getCell(11).toString().isEmpty()) {
+                            LocalDate clarificationDate = LocalDate.parse(row.getCell(11).toString(), formatter);
+                            fee.setClarificationDate(clarificationDate.atStartOfDay());
+                        }
+                    } catch (Exception e) {
+                        logRowError(row, 11, e);
                         fee.setClarificationDate(null);
                     }
-                } else {
-                    fee.setClarificationDate(null);
-                }
-                if (row.getCell(13) != null && !row.getCell(13).toString().isEmpty()) {
-                    try {
-                        LocalDate treasuryRefundDate = LocalDate.parse(row.getCell(13).toString(), formatter);
-                        fee.setTreasuryRefundDate(treasuryRefundDate);
-                    } catch (Exception e) {
-                        System.err.println("Error parsing date: " + row.getCell(13).toString());
-                        System.out.println("Line: " + row.getRowNum()+" Col"+13);
-                        System.out.println(e.getMessage());
 
+                    // Treasury Refund Date
+                    try {
+                        if (row.getCell(14) != null && !row.getCell(14).toString().isEmpty()) {
+                            LocalDate treasuryRefundDate = LocalDate.parse(row.getCell(14).toString(), formatter);
+                            fee.setTreasuryRefundDate(treasuryRefundDate);
+                        }
+                    } catch (Exception e) {
+                        logRowError(row, 14, e);
                         fee.setTreasuryRefundDate(null);
                     }
-                } else {
-                    fee.setTreasuryRefundDate(null);
-                }
-                if (row.getCell(14) != null && !row.getCell(14).toString().isEmpty()) {
-                    try {
-                        LocalDate PaymentOrderSentDate = LocalDate.parse(row.getCell(14).toString(), formatter);
-                        fee.setPaymentOrderSentDate(PaymentOrderSentDate);
-                    } catch (Exception e) {
-                        System.err.println("Error parsing date: " + row.getCell(14).toString());
-                        System.out.println("Line: " + row.getRowNum()+" Col"+14);
-                        System.out.println(e.getMessage());
 
+                    // Payment Order Sent Date
+                    try {
+                        if (row.getCell(15) != null && !row.getCell(15).toString().isEmpty() && row.getCell(15).toString().matches("\\d{2}-[A-Za-z]{3}-\\d{4}") ) {
+                            LocalDate paymentOrderSentDate = LocalDate.parse(row.getCell(15).toString(), formatter);
+                            fee.setPaymentOrderSentDate(paymentOrderSentDate);
+                        }
+                        else {
+                            fee.setPaymentOrderSentDate(null);
+                        }
+                    } catch (Exception e) {
+                        logRowError(row, 15, e);
                         fee.setPaymentOrderSentDate(null);
                     }
-                } else {
-                    fee.setPaymentOrderSentDate(null);
-                }
-//                fee.setOrderStatus(OrderStatus.valueOf(getStringCellValue(row.getCell(1))));
-                List<String> canceledProjects = new ArrayList<>();
-                canceledProjects.add(row.getCell(16).toString());
-                canceledProjects.add(row.getCell(17).toString());
-                canceledProjects.add(row.getCell(18).toString());
-                fee.setCanceledProject(canceledProjects);
-                fee.setStatus(Status.TRANSFERRED);
-                fee.setTransferDate(LocalDateTime.now());
-                fee.setExtractionId(0L);
-                fee.setTransferPerson(userDetails);
-                fee.setChangePerson(userDetails);
-                fee.setExtractionTask(task);
-                connectionFees.add(fee);
 
-            }
-            try {
-                try {
-                    connectionFees.forEach(System.out::println);
+                    List<String> canceledProjects = new ArrayList<>();
+                    canceledProjects.add(getStringCellValue(row.getCell(16)));
+                    canceledProjects.add(getStringCellValue(row.getCell(17)));
+                    canceledProjects.add(getStringCellValue(row.getCell(18)));
+                    fee.setCanceledProject(canceledProjects);
+
+                    fee.setStatus(Status.TRANSFERRED);
+                    fee.setTransferDate(LocalDateTime.now());
+                    fee.setExtractionId(0L);
+                    fee.setTransferPerson(userDetails);
+                    fee.setChangePerson(userDetails);
+                    fee.setExtractionTask(task);
+
+                    connectionFees.add(fee);
+
                 } catch (Exception e) {
-                    System.out.println(e.getMessage());
+                    logFullRow(row, e);
                 }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
+            }
+            connectionFeeRepository.saveAll(connectionFees);
+            System.out.println("Processed " + connectionFees.size() + " records");
+            return connectionFees.size();
+
+        } catch (Exception e) {
+            System.err.println("🚨 Critical error reading file: " + file.getOriginalFilename());
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    private void logRowError(Row row, int columnIndex, Exception e) {
+        System.out.println("❌ Error processing row " + (row.getRowNum() + 1) +
+                " at column " + (columnIndex + 1) + ": " + e.getMessage());
+    }
+
+    private void logFullRow(Row row, Exception e) {
+        StringBuilder rowContent = new StringBuilder();
+        for (int j = 0; j < row.getLastCellNum(); j++) {
+            Cell cell = row.getCell(j, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            rowContent.append("Col ").append(j + 1).append(": ").append(cell.toString()).append(" | ");
+        }
+        System.out.println("🚨 Error processing row " + (row.getRowNum() + 1) +
+                ": " + e.getMessage());
+        System.out.println("Row content: " + rowContent.toString());
+    }
+
+
+    private boolean isRowEmpty(Row row) {
+        if (row == null) {
+            return true;
+        }
+        for (int j = 0; j < row.getLastCellNum(); j++) {
+            Cell cell = row.getCell(j, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            if (cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty()) {
+                return false;
             }
         }
-        System.out.println("Processed " + connectionFees.size() + " records");
-        return connectionFees.size();
+        return true;
     }
 
     // Helper Methods
