@@ -15,14 +15,20 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +44,8 @@ public class ExcelServiceImpl implements ExcelService {
     private final ExtractionRepository extractionRepository;
     private final ExtractionTaskRepository extractionTaskRepository;
     private final ConnectionFeeRepository connectionFeeRepository;
+    @Value("${upload.directory}")
+    private String uploadDirectory;
 
     private boolean isCellEmpty(Cell cell) {
         return cell == null || cell.getCellType() == CellType.BLANK;
@@ -45,7 +53,13 @@ public class ExcelServiceImpl implements ExcelService {
 
     public List<ExtractionResponseDto> readExcel(MultipartFile file) {
         LocalDateTime today = LocalDateTime.now();
-        ExtractionTask extTask = extractionTaskRepository.save(new ExtractionTask(today, file.getOriginalFilename(), FileStatus.GOOD));
+        String fileName = "";
+        try {
+            fileName = storeFile(file);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        ExtractionTask extTask = extractionTaskRepository.save(new ExtractionTask(today, fileName, FileStatus.GOOD));
         List<ExtractionResponseDto> extractionResponseDtoList = new ArrayList<>();
         try {
             XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
@@ -325,5 +339,21 @@ public class ExcelServiceImpl implements ExcelService {
     @Override
     public ExtractionRepository getRepo() {
         return this.extractionRepository;
+    }
+
+    public String storeFile(MultipartFile file) throws IOException {
+        String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        if (originalFileName.contains("..")) {
+            throw new IOException("Invalid file name: " + originalFileName);
+        }
+
+        String uniqueFileName = LocalDateTime.now().toString().replace(':','-') + "_" + originalFileName;
+
+        Path targetLocation = Paths.get(uploadDirectory).resolve(uniqueFileName);
+        Files.createDirectories(targetLocation.getParent());
+
+        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+        return targetLocation.toString();
     }
 }
