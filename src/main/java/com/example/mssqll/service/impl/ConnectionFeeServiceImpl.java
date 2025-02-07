@@ -28,7 +28,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -561,14 +560,19 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         User userDetails = (User) authentication.getPrincipal();
         List<ConnectionFee> connectionFees = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
-
+        int rowNum = 0;
         try {
             Workbook workbook = new XSSFWorkbook(file.getInputStream());
             Sheet sheet = workbook.getSheetAt(0);
 
             for (int i = 2; i <= sheet.getLastRowNum(); i++) { // Start from row 2 to skip headers
                 Row row = sheet.getRow(i);
-
+                if (getDoubleCellValue(row.getCell(7))== null ||
+                        getDoubleCellValue(row.getCell(7)) == 0.0) {
+                    System.out.println(getDoubleCellValue(row.getCell(7)));
+                    continue;
+                }
+                rowNum = i;
                 // ✅ Skip empty rows
                 if (isRowEmpty(row)) {
                     continue;
@@ -615,8 +619,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     fee.setTotalAmount(getDoubleCellValue(row.getCell(7)));//8 ბრუნვა
                     fee.setPurpose(getStringCellValue(row.getCell(8)));//9 დანიშნულება
                     fee.setDescription(getStringCellValue(row.getCell(9))); //10 დამატებითი ინფირმაცია
-                    fee.setTax(getStringCellValue(row.getCell(10)));// 11 გარკვევის თარიღი
-                    fee.setNote(getStringCellValue(row.getCell(12)));// 13 შენიშვნა
+                    fee.setTax(getStringCellValue(row.getCell(10)));//
+                    fee.setNote(getStringCellValue(row.getCell(13)));// 13 შენიშვნა
+                    System.out.println(fee.getNote()+" note");
 
                     // Clarification Date
                     try {
@@ -678,7 +683,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             return connectionFees.size();
 
         } catch (Exception e) {
-            System.err.println("🚨 Critical error reading file: " + file.getOriginalFilename());
+            System.err.println("🚨 Critical error reading file :" + file.getOriginalFilename()+"row: "+rowNum);
             e.printStackTrace();
             return 0;
         }
@@ -708,6 +713,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         for (int j = 0; j < row.getLastCellNum(); j++) {
             Cell cell = row.getCell(j, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             if (cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty()) {
+                return false;
+            }
+            if(row.getCell(7) == null || row.getCell(7).toString().trim().isEmpty()) {
                 return false;
             }
         }

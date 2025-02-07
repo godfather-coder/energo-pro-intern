@@ -109,12 +109,13 @@ public class ConnectionFee {
     @Nationalized
     private String purpose;
 
-    @Column(name = "description", length = 255, nullable = false)
+    @Column(name = "description", length = 255)
     @Nationalized
     private String description;
 
-    @Column(name = "tax_id", length = 255, nullable = false)
+    @Column(name = "tax_id", length = 255)
     @Nationalized
+    @Nullable
     private String tax;
 
     @ManyToOne
