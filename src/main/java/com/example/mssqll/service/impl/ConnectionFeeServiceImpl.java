@@ -131,6 +131,9 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setRegion(connectionFeeDetails.getRegion());
         existingFee.setServiceCenter(connectionFeeDetails.getServiceCenter());
         existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
+        if((existingFee.getFirstWithdrawType() != null)){
+
+        }
         existingFee.setExtractionTask(connectionFeeDetails.getExtractionTask());
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
@@ -362,6 +365,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                             connectionFeeRepository.deleteResidualEntriesByParentId(connectionFee1.getId());
                         }
                         connectionFee1.setStatus(Status.CANCELED);
+                        connectionFee1.setWithdrawType("4 (ერთანი გადახდა, გადანაწილებული რამოდენიმე პროექტის საფასურად)");
                         connectionFeeRepository.save(connectionFee1);
                         connectionFeeRepository.saveAll(feeToAdd);
                     } else {

@@ -136,6 +136,10 @@ public class ConnectionFee {
     @Where(clause = "status != 'SOFT_DELETED'") // Filter out soft-deleted children
     private List<ConnectionFee> children ;
 
+    @Nullable
+    @Column(name = "first_withdraw_type", length = 255)
+    @Nationalized
+    private String firstWithdrawType;
 
     public ConnectionFee() {
 
