@@ -5,6 +5,7 @@ import jakarta.persistence.GenerationType;
 import java.time.LocalDateTime;
 
 import lombok.*;
+import org.hibernate.annotations.Nationalized;
 
 @Data
 @Builder
@@ -22,6 +23,7 @@ public class ExtractionTask {
 
     private LocalDateTime sendDate;
 
+    @Nationalized
     private String fileName;
 
 
