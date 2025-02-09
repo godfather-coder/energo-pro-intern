@@ -33,7 +33,15 @@ public class ConnectionFeeSpecification {
                             predicates.add(criteriaBuilder.equal(root.get("status"), value));
                             break;
                         case "orderN":
-                            predicates.add(criteriaBuilder.like(root.get("orderN"), "%" + value + "%"));
+                            if (value instanceof List<?>) {
+                                List<Predicate> likePredicates = new ArrayList<>();
+                                for (String type : (List<String>) value) {
+                                    likePredicates.add(criteriaBuilder.like(root.get("orderN"), "%" + type + "%"));
+                                }
+                                predicates.add(criteriaBuilder.or(likePredicates.toArray(new Predicate[0])));
+                            } else {
+                                predicates.add(criteriaBuilder.like(root.get("withdrawType"), "%" + value + "%"));
+                            }
                             break;
                         case "region":
                             predicates.add(criteriaBuilder.like(root.get("region"), "%" + value + "%"));
@@ -45,7 +53,15 @@ public class ConnectionFeeSpecification {
                             predicates.add(criteriaBuilder.like(root.get("projectID"), "%" + value + "%"));
                             break;
                         case "withdrawType":
-                            predicates.add(criteriaBuilder.like(root.get("withdrawType"), "%" + value + "%"));
+                            if (value instanceof List<?>) {
+                                List<Predicate> likePredicates = new ArrayList<>();
+                                for (String type : (List<String>) value) {
+                                    likePredicates.add(criteriaBuilder.like(root.get("withdrawType"), "%" + type + "%"));
+                                }
+                                predicates.add(criteriaBuilder.or(likePredicates.toArray(new Predicate[0])));
+                            } else {
+                                predicates.add(criteriaBuilder.like(root.get("withdrawType"), "%" + value + "%"));
+                            }
                             break;
                         case "extractionTask":
                             predicates.add(criteriaBuilder.equal(root.get("extractionTask").get("id"), value));

@@ -93,12 +93,28 @@ public class ConnectionFeeController {
     @GetMapping("/filter")
     public ResponseEntity<PagedModel<?>> filterConnectionFees(
             @RequestParam Map<String, String> filters,
+            @RequestParam(required = false) List<String> withdrawType,
+            @RequestParam(required = false) List<String> orderN,
+            @RequestParam(required = false) List<String> orderStatus,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "transferDate") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDir) {
         int adjustedPage = (page < 1) ? 0 : page - 1;
-        Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
+
+        Map<String, Object> updatedFilters = new HashMap<>(filters);
+        if (withdrawType != null) {
+            updatedFilters.put("withdrawType", withdrawType);
+        }
+        if (orderN != null) {
+            updatedFilters.put("orderN", orderN);
+        }
+        if (orderStatus != null) {
+            updatedFilters.put("status", orderStatus);
+        }
+
+        Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications(updatedFilters);
+
         PagedModel<?> resPage = connectionFeeService.letDoFilter(spec, adjustedPage, size, sortBy, sortDir);
         return ResponseEntity.ok().body(resPage);
     }
