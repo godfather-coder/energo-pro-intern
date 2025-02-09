@@ -210,15 +210,21 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
         List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(connectionFee.getParent().getId());
         if (Objects.equals(connectionFeeRepository.sumTotalAmountByParentId(connectionFee.getParent()), connectionFee.getParent().getTotalAmount())) {
+            System.out.println("პირველი იფი");
             connectionFee.setNote("ნაშთი");
             connectionFee.setStatus(Status.REMINDER);
             connectionFee.setOrderN("ნაშთი");
             connectionFeeRepository.save(connectionFee);
         } else if (!connectionFee.getStatus().equals(Status.REMINDER)) {
+            System.out.println("მეორე იფი");
             Optional<ConnectionFee> reminderFee = connectionFeeRepository.findReminderChildByParentId(connectionFee.getParent().getId());
             if (reminderFee.isPresent()) {
                 ConnectionFee reminderFee1 = reminderFee.get();
-                reminderFee1.setTotalAmount(reminderFee1.getTotalAmount() + connectionFee.getTotalAmount());
+                if((reminderFee1.getTotalAmount() + connectionFee.getTotalAmount()) == connectionFee.getParent().getTotalAmount()){
+                    System.out.println("axlaaaaaaaaaaaaaaaaaaa");
+                    System.out.println((reminderFee1.getTotalAmount() + connectionFee.getTotalAmount()));
+                    connectionFeeRepository.delete(reminderFee1);
+                };
             }
             connectionFee.setStatus(Status.SOFT_DELETED);
             connectionFee.setChangePerson(userDetails);
