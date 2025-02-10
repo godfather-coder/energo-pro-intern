@@ -28,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -131,7 +132,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setRegion(connectionFeeDetails.getRegion());
         existingFee.setServiceCenter(connectionFeeDetails.getServiceCenter());
         existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
-        if((existingFee.getFirstWithdrawType() != null)){
+        if ((existingFee.getFirstWithdrawType() != null)) {
 
         }
         existingFee.setExtractionTask(connectionFeeDetails.getExtractionTask());
@@ -206,34 +207,51 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
     public void softDeleteById(Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User userDetails = (User) authentication.getPrincipal();
+
         ConnectionFee connectionFee = connectionFeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ConnectionFee not found with id: " + id));
-        List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(connectionFee.getParent().getId());
-        if (Objects.equals(connectionFeeRepository.sumTotalAmountByParentId(connectionFee.getParent()), connectionFee.getParent().getTotalAmount())) {
-            System.out.println("პირველი იფი");
-            connectionFee.setNote("ნაშთი");
-            connectionFee.setStatus(Status.REMINDER);
-            connectionFee.setOrderN("ნაშთი");
+
+        ConnectionFee parent = connectionFee.getParent();
+        List<ConnectionFee> connectionFees = connectionFeeRepository.findAllDescendants(parent.getId());
+
+        // If the sum of all children equals the parent's total amount, mark it as TRANSFERRED
+        if (Objects.equals(connectionFeeRepository.sumTotalAmountByParentId(parent), parent.getTotalAmount())) {
+            connectionFee.setStatus(Status.TRANSFERRED);
             connectionFeeRepository.save(connectionFee);
-        } else if (!connectionFee.getStatus().equals(Status.REMINDER)) {
-            System.out.println("მეორე იფი");
-            Optional<ConnectionFee> reminderFee = connectionFeeRepository.findReminderChildByParentId(connectionFee.getParent().getId());
-            if (reminderFee.isPresent()) {
-                ConnectionFee reminderFee1 = reminderFee.get();
-                if((reminderFee1.getTotalAmount() + connectionFee.getTotalAmount()) == connectionFee.getParent().getTotalAmount()){
-                    System.out.println("axlaaaaaaaaaaaaaaaaaaa");
-                    System.out.println((reminderFee1.getTotalAmount() + connectionFee.getTotalAmount()));
-                    connectionFeeRepository.delete(reminderFee1);
-                };
+            return;
+        }
+
+        // Check if the connectionFee is NOT a REMINDER
+        if (!connectionFee.getStatus().equals(Status.REMINDER)) {
+            Optional<ConnectionFee> reminderFeeOpt = connectionFeeRepository.findReminderChildByParentId(parent.getId());
+
+            if (reminderFeeOpt.isPresent()) {
+                ConnectionFee reminderFee = reminderFeeOpt.get();
+
+                // Add the deleted child's amount to the reminder fee
+                reminderFee.setTotalAmount(reminderFee.getTotalAmount() + connectionFee.getTotalAmount());
+
+                // If the new reminder amount equals the parent's total amount, delete the reminder
+                if (reminderFee.getTotalAmount().equals(parent.getTotalAmount())) {
+                    connectionFeeRepository.delete(reminderFee);
+                } else {
+                    connectionFeeRepository.save(reminderFee);
+                }
             }
+
+            // Soft delete the current connectionFee
             connectionFee.setStatus(Status.SOFT_DELETED);
             connectionFee.setChangePerson(userDetails);
             connectionFeeRepository.save(connectionFee);
-        } else if (connectionFees.size() == 1) {
-            connectionFees.get(0).setStatus(Status.SOFT_DELETED);
-            connectionFees.get(0).setChangePerson(userDetails);
-            connectionFeeRepository.save(connectionFees.get(0));
-            ConnectionFee parent = connectionFee.getParent();
+        }
+        // Handle case where only one child remains
+        else if (connectionFees.size() == 1) {
+            ConnectionFee lastChild = connectionFees.get(0);
+            lastChild.setStatus(Status.SOFT_DELETED);
+            lastChild.setChangePerson(userDetails);
+            connectionFeeRepository.save(lastChild);
+
+            // Update the parent's status
             if (parent.getProjectID() != null) {
                 parent.setStatus(Status.TRANSFER_COMPLETE);
             } else {
@@ -241,7 +259,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             }
             connectionFeeRepository.save(parent);
         }
-
     }
 
     @Override
@@ -263,6 +280,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 "აღწერა",//13
                 "შემცველელი",//14
                 "გაუქმებული პროექტები",//15
+                "მშობელი"
         };
 
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -279,18 +297,25 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             cell.setCellValue(columns[i]);
             cell.setCellStyle(boldCellStyle);
         }
+        List<ConnectionFee> flatList = new ArrayList<>();
+
+        for (ConnectionFee fee : connectionFees) {
+            flatList.add(fee);
+            flatList.addAll(fee.getChildren().stream()
+                    .filter(child -> !child.getStatus().equals(Status.SOFT_DELETED))
+                    .filter(child -> !child.getStatus().equals(Status.REMINDER))
+                    .toList());
+        }
 
         int rowIdx = 1;
-        for (ConnectionFee connectionFee : connectionFees) {
+        for (ConnectionFee connectionFee : flatList) {
             Row row = sheet.createRow(rowIdx);
-
             for (int i = 0; i < columns.length; i++) {
                 Cell cell = row.createCell(i);
                 cell.setCellValue(getCellValue(connectionFee, i));
             }
             rowIdx++;
         }
-
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         workbook.write(out);
         workbook.close();
@@ -463,6 +488,13 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             case 14 ->
                     connectionFee.getChangePerson().getLastName() + " " + connectionFee.getChangePerson().getFirstName();
             case 15 -> connectionFee.getCanceledOrders().toString();
+            case 16 -> {
+                if (connectionFee.getParent() != null) {
+                    yield connectionFee.getParent().getId().toString();
+                }
+                yield "";
+            }
+
             default -> "";
         };
     }
@@ -524,6 +556,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                 .tax(cf.getTax())
                 .transferPerson(castUserToDto(cf.getTransferPerson()))
                 .changePerson(castUserToDto(cf.getChangePerson()))
+                .note(cf.getNote())
                 .build();
     }
 
@@ -577,7 +610,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
             for (int i = 2; i <= sheet.getLastRowNum(); i++) { // Start from row 2 to skip headers
                 Row row = sheet.getRow(i);
-                if (getDoubleCellValue(row.getCell(7))== null ||
+                if (getDoubleCellValue(row.getCell(7)) == null ||
                         getDoubleCellValue(row.getCell(7)) == 0.0) {
                     System.out.println(getDoubleCellValue(row.getCell(7)));
                     continue;
@@ -631,7 +664,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     fee.setDescription(getStringCellValue(row.getCell(9))); //10 დამატებითი ინფირმაცია
                     fee.setTax(getStringCellValue(row.getCell(10)));//
                     fee.setNote(getStringCellValue(row.getCell(13)));// 13 შენიშვნა
-                    System.out.println(fee.getNote()+" note");
+                    System.out.println(fee.getNote() + " note");
 
                     // Clarification Date
                     try {
@@ -657,11 +690,10 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
                     // Payment Order Sent Date
                     try {
-                        if (row.getCell(15) != null && !row.getCell(15).toString().isEmpty() && row.getCell(15).toString().matches("\\d{2}-[A-Za-z]{3}-\\d{4}") ) {
+                        if (row.getCell(15) != null && !row.getCell(15).toString().isEmpty() && row.getCell(15).toString().matches("\\d{2}-[A-Za-z]{3}-\\d{4}")) {
                             LocalDate paymentOrderSentDate = LocalDate.parse(row.getCell(15).toString(), formatter);
                             fee.setPaymentOrderSentDate(paymentOrderSentDate);
-                        }
-                        else {
+                        } else {
                             fee.setPaymentOrderSentDate(null);
                         }
                     } catch (Exception e) {
@@ -693,7 +725,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             return connectionFees.size();
 
         } catch (Exception e) {
-            System.err.println("🚨 Critical error reading file :" + file.getOriginalFilename()+"row: "+rowNum);
+            System.err.println("🚨 Critical error reading file :" + file.getOriginalFilename() + "row: " + rowNum);
             e.printStackTrace();
             return 0;
         }
@@ -715,7 +747,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         System.out.println("Row content: " + rowContent.toString());
     }
 
-
     private boolean isRowEmpty(Row row) {
         if (row == null) {
             return true;
@@ -725,7 +756,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             if (cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty()) {
                 return false;
             }
-            if(row.getCell(7) == null || row.getCell(7).toString().trim().isEmpty()) {
+            if (row.getCell(7) == null || row.getCell(7).toString().trim().isEmpty()) {
                 return false;
             }
         }

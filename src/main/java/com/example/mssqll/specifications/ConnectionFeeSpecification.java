@@ -2,6 +2,7 @@ package com.example.mssqll.specifications;
 
 import com.example.mssqll.models.ConnectionFee;
 import com.example.mssqll.models.ExtractionTask;
+import com.example.mssqll.models.Status;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -20,7 +21,6 @@ public class ConnectionFeeSpecification {
     public static Specification<ConnectionFee> getSpecifications(Map<String, Object> filters) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(criteriaBuilder.isNull(root.get("parent")));
 
             if (!filters.containsKey("status")) {
                 predicates.add(criteriaBuilder.notEqual(root.get("status"), "SOFT_DELETED"));
@@ -29,7 +29,7 @@ public class ConnectionFeeSpecification {
             filters.forEach((key, value) -> {
                 if (value != null) {
                     switch (key) {
-                        case "status":
+                        case " ":
                             predicates.add(criteriaBuilder.equal(root.get("status"), value));
                             break;
                         case "orderN":
@@ -141,6 +141,12 @@ public class ConnectionFeeSpecification {
                             Join<ConnectionFee, ExtractionTask> extractionTaskJoin = root.join("extractionTask");
                             predicates.add(criteriaBuilder.like(extractionTaskJoin.get("fileName"), "%" + value + "%"));
                             break;
+                        case "download":
+                            System.out.println("Downloading records...");
+                            // Exclude records where status is REMINDER
+                            predicates.add(criteriaBuilder.notEqual(root.get("status"), Status.REMINDER));
+                            break;
+
                     }
                 }
             });

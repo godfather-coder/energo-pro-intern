@@ -11,6 +11,8 @@ import com.example.mssqll.utiles.exceptions.ResourceNotFoundException;
 import com.example.mssqll.utiles.exceptions.TokenValidationException;
 import com.example.mssqll.utiles.resonse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpHeaders;
@@ -22,7 +24,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -146,6 +153,7 @@ public class ConnectionFeeController {
         if (!res.isValid()) {
             throw new TokenValidationException(res.getMessage());
         }
+        filters.put("download","REMINDER");
         Specification<ConnectionFee> spec = ConnectionFeeSpecification.getSpecifications((Map) filters);
         ByteArrayInputStream excelStream = connectionFeeService.createExcel(connectionFeeService.getDownloadDataBySpec(spec));
 
@@ -206,6 +214,42 @@ public class ConnectionFeeController {
             System.out.println(1);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to process the file: " + e.getMessage());
+        }
+    }
+    @GetMapping("/download-ext")
+    public ResponseEntity<Resource> downloadFile(@RequestParam String fileName,@RequestParam String accessToken) {
+        TokenValidationResult res = jwtService.validateTokenWithoutUserName(accessToken);
+                if (!res.isValid()) {
+                    throw new TokenValidationException(res.getMessage());
+                }
+        try {
+
+            // Decode the filename in case it's URL encoded
+            String decodedFileName = java.net.URLDecoder.decode(fileName, StandardCharsets.UTF_8);
+
+            // Construct the file path
+            Path filePath = Paths.get("C:/uploads/").resolve(decodedFileName).normalize();
+            File file = filePath.toFile();
+
+            // Check if file exists
+            if (!file.exists()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            // Load file as a resource
+            Resource resource = new FileSystemResource(file);
+
+            // Encode filename for safe download
+            String encodedFileName = URLEncoder.encode(decodedFileName, StandardCharsets.UTF_8)
+                    .replace("+", "%20"); // Fix spaces
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM) // Generic content type for download
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
