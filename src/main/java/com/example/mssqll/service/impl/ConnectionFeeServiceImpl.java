@@ -131,10 +131,12 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         existingFee.setStatus(connectionFeeDetails.getStatus());
         existingFee.setRegion(connectionFeeDetails.getRegion());
         existingFee.setServiceCenter(connectionFeeDetails.getServiceCenter());
-        existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
-        if ((existingFee.getFirstWithdrawType() != null)) {
-
+        System.out.println(existingFee.getFirstWithdrawType());
+        if (existingFee.getFirstWithdrawType() == null) {
+            System.out.println("uraaa");
+            existingFee.setFirstWithdrawType(connectionFeeDetails.getWithdrawType());
         }
+        existingFee.setWithdrawType(connectionFeeDetails.getWithdrawType());
         existingFee.setExtractionTask(connectionFeeDetails.getExtractionTask());
         existingFee.setClarificationDate(connectionFeeDetails.getClarificationDate());
         if (!Objects.equals(existingFee.getProjectID(), connectionFeeDetails.getProjectID())) {
@@ -216,12 +218,33 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
         // If the sum of all children equals the parent's total amount, mark it as TRANSFERRED
         if (Objects.equals(connectionFeeRepository.sumTotalAmountByParentId(parent), parent.getTotalAmount())) {
-            connectionFee.setStatus(Status.TRANSFERRED);
+            Optional<ConnectionFee> reminderFeeOpt = connectionFeeRepository.findReminderChildByParentId(parent.getId());
+
+
+            if (reminderFeeOpt.isEmpty()) {
+                if (parent.getTotalAmount() - connectionFee.getTotalAmount() != 0) {
+                    ConnectionFee reminderFee1 = new ConnectionFee();
+                    reminderFee1.setParent(parent);
+                    reminderFee1.setNote("ნაშთი");
+                    reminderFee1.setStatus(Status.REMINDER);
+                    reminderFee1.setChangePerson(userDetails);
+                    reminderFee1.setTransferPerson(userDetails);
+                    reminderFee1.setExtractionTask(parent.getExtractionTask());
+                    reminderFee1.setOrderN("ნაშთი");
+                    reminderFee1.setPurpose("ნაშთი");
+                    reminderFee1.setTotalAmount( connectionFee.getTotalAmount());
+                    connectionFeeRepository.save(reminderFee1);
+                }
+            }
+            connectionFee.setStatus(Status.SOFT_DELETED);
+            parent.setStatus(Status.TRANSFERRED);
+            connectionFeeRepository.save(parent);
             connectionFeeRepository.save(connectionFee);
             return;
         }
 
         // Check if the connectionFee is NOT a REMINDER
+        System.out.println("heck if the connectionFee is NOT a REMINDER ");
         if (!connectionFee.getStatus().equals(Status.REMINDER)) {
             Optional<ConnectionFee> reminderFeeOpt = connectionFeeRepository.findReminderChildByParentId(parent.getId());
 
@@ -233,19 +256,25 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
                 // If the new reminder amount equals the parent's total amount, delete the reminder
                 if (reminderFee.getTotalAmount().equals(parent.getTotalAmount())) {
+                    parent.setWithdrawType(parent.getFirstWithdrawType());
+                    parent.setStatus(Status.TRANSFERRED);
+                    connectionFeeRepository.save(parent);
                     connectionFeeRepository.delete(reminderFee);
                 } else {
                     connectionFeeRepository.save(reminderFee);
                 }
             }
+            System.out.println("gamocda nashtze damatebas");
 
             // Soft delete the current connectionFee
             connectionFee.setStatus(Status.SOFT_DELETED);
+            System.out.println("statusi shecvala " + connectionFee.getStatus());
             connectionFee.setChangePerson(userDetails);
             connectionFeeRepository.save(connectionFee);
         }
         // Handle case where only one child remains
         else if (connectionFees.size() == 1) {
+            System.out.println("aqa mshvidoba");
             ConnectionFee lastChild = connectionFees.get(0);
             lastChild.setStatus(Status.SOFT_DELETED);
             lastChild.setChangePerson(userDetails);
@@ -808,5 +837,3 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
 
 
 }
-
-
