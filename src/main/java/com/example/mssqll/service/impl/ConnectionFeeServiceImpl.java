@@ -628,6 +628,11 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
         PAYMENT_MAPPING.put(14, "14 (ჰესები DDSH)");
         PAYMENT_MAPPING.put(15, "15 (ჰესები DDNA)");
 
+        Map<String, OrderStatus> ORDER_STATUS_MAPPING = new HashMap<>();
+        ORDER_STATUS_MAPPING.put("გაუქმებული",OrderStatus.CANCELED);
+        ORDER_STATUS_MAPPING.put("დასასრულებელი",OrderStatus.ORDER_INCOMPLETE);
+        ORDER_STATUS_MAPPING.put("დასრულებული",OrderStatus.ORDER_COMPLETE);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User userDetails = (User) authentication.getPrincipal();
         List<ConnectionFee> connectionFees = new ArrayList<>();
@@ -687,7 +692,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                         fee.setExtractionDate(null); // Set to null if there is any error
                     }
 
-
                     fee.setTotalAmount(getDoubleCellValue(row.getCell(7)));//8 ბრუნვა
                     fee.setPurpose(getStringCellValue(row.getCell(8)));//9 დანიშნულება
                     fee.setDescription(getStringCellValue(row.getCell(9))); //10 დამატებითი ინფირმაცია
@@ -705,7 +709,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                         logRowError(row, 11, e);
                         fee.setClarificationDate(null);
                     }
-
                     // Treasury Refund Date
                     try {
                         if (row.getCell(14) != null && !row.getCell(14).toString().isEmpty()) {
@@ -716,7 +719,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                         logRowError(row, 14, e);
                         fee.setTreasuryRefundDate(null);
                     }
-
                     // Payment Order Sent Date
                     try {
                         if (row.getCell(15) != null && !row.getCell(15).toString().isEmpty() && row.getCell(15).toString().matches("\\d{2}-[A-Za-z]{3}-\\d{4}")) {
@@ -728,6 +730,14 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     } catch (Exception e) {
                         logRowError(row, 15, e);
                         fee.setPaymentOrderSentDate(null);
+                    }
+
+                    // order status
+                    try{
+                        fee.setOrderStatus(ORDER_STATUS_MAPPING.get(row.getCell(22).toString()));
+                    }catch (Exception e){
+                        fee.setOrderStatus(null);
+                        logRowError(row, 22, e);
                     }
 
                     List<String> canceledProjects = new ArrayList<>();
@@ -742,7 +752,6 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     fee.setTransferPerson(userDetails);
                     fee.setChangePerson(userDetails);
                     fee.setExtractionTask(task);
-
                     connectionFees.add(fee);
 
                 } catch (Exception e) {
