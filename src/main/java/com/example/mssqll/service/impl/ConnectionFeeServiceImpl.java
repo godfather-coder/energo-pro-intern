@@ -650,7 +650,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     continue;
                 }
                 rowNum = i;
-                // ✅ Skip empty rows
+                //  Skip empty rows
                 if (isRowEmpty(row)) {
                     continue;
                 }
@@ -666,7 +666,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
                     Integer paymentType = (int) row.getCell(5).getNumericCellValue();//6 ტიპი
                     fee.setWithdrawType(PAYMENT_MAPPING.getOrDefault(paymentType, "Unknown payment type"));
 
-                    // ✅ Date Handling
+                    // Date Handling
                     try {
                         LocalDate extractionDate = null;
                         if (row.getCell(6) != null && !row.getCell(6).toString().trim().isEmpty()) {
@@ -763,7 +763,7 @@ public class ConnectionFeeServiceImpl implements ConnectionFeeService {
             return connectionFees.size();
 
         } catch (Exception e) {
-            System.err.println("🚨 Critical error reading file :" + file.getOriginalFilename() + "row: " + rowNum);
+            System.err.println("Critical error reading file :" + file.getOriginalFilename() + "row: " + rowNum);
             e.printStackTrace();
             return 0;
         }

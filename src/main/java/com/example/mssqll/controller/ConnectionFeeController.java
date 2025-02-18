@@ -201,9 +201,7 @@ public class ConnectionFeeController {
             throw new ResourceNotFoundException("Please select a file to upload");
         }
         try {
-            System.out.println(0);
             count = connectionFeeService.uploadHistory(file);
-            System.out.println("0-1");
             return ResponseEntity.ok(
                     Map.of(
                             "message", "Successfully uploaded",
@@ -216,6 +214,7 @@ public class ConnectionFeeController {
                     .body("Failed to process the file: " + e.getMessage());
         }
     }
+
 
     @GetMapping("/download-ext")
     public ResponseEntity<Resource> downloadFile(@RequestParam String fileName,@RequestParam String accessToken) {
